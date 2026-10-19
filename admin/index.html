@@ -404,7 +404,7 @@
         `;
       }
 
-      // UNDUH TEMPLATE CSV GURU (GAMBAR 1)
+      // UNDUH TEMPLATE CSV GURU (SESUAI GAMBAR 1)
       downloadGuruTemplate() {
         const csvContent = "data:text/csv;charset=utf-8," + encodeURIComponent("Id.,Nama,Username,Password\n001,Muhammad Syihabuddin,syihabadaw,123\n002,Naila,naila32,123\n");
         const link = document.createElement("a");
@@ -432,7 +432,7 @@
           let addedCount = 0;
 
           lines.forEach((line, index) => {
-            if (index === 0 || !line.trim()) return; // Skip Header
+            if (index === 0 || !line.trim()) return; // Lewati Header
             const cols = line.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
             if (cols.length >= 3) {
               const id = cols[0] || '00' + (db.teachers.length + 1);
@@ -440,7 +440,7 @@
               const username = cols[2];
               const password = cols[3] || '123';
 
-              // Cek jika username belum ada
+              // Masukkan jika username belum terdaftar
               if (name && username && !db.teachers.some(t => t.username === username)) {
                 db.teachers.push({ id, name, username, password, subjects: [] });
                 addedCount++;
@@ -570,7 +570,7 @@
         }
       }
 
-      // UNDUH TEMPLATE CSV SISWA (GAMBAR 2)
+      // UNDUH TEMPLATE CSV SISWA (SESUAI GAMBAR 2)
       downloadSiswaTemplate() {
         const csvContent = "data:text/csv;charset=utf-8," + encodeURIComponent("Id.,Nama,Kelas,Username,Password\n001,Muhammad Syihabuddin,7,syihabadaw,123\n002,Naila,8,naila32,123\n");
         const link = document.createElement("a");
@@ -598,7 +598,7 @@
           let addedCount = 0;
 
           lines.forEach((line, index) => {
-            if (index === 0 || !line.trim()) return; // Skip Header
+            if (index === 0 || !line.trim()) return; // Lewati Header
             const cols = line.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
             if (cols.length >= 4) {
               const id = cols[0] || '00' + (db.students.length + 1);
