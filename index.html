@@ -23,26 +23,25 @@
 <body class="bg-slate-200 min-h-screen flex flex-col justify-between text-slate-800">
 
   <!-- HEADER / NAVBAR -->
-  <header class="bg-[#0f4c42] text-white shadow-md">
+  <header class="bg-[#0f4c42] text-white shadow-md sticky top-0 z-30">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex justify-between items-center h-20">
         
         <!-- Logo & Judul Kiri -->
-        <div class="flex items-center gap-3">
-          <!-- Logo Kemenag / Sekolah -->
-          <img src="aset/mts.png" alt="Logo Kemenag" class="w-12 h-12 object-contain drop-shadow" onerror="this.onerror=null; this.src='https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Logo_Kementerian_Agama_Republik_Indonesia_new_version.png/600px-Logo_Kementerian_Agama_Republik_Indonesia_new_version.png';">
+        <a href="index.html" class="flex items-center gap-3">
+          <img src="../aset/mts.png" alt="Logo Kemenag" class="w-12 h-12 object-contain drop-shadow">
           <div>
             <h1 class="font-bold text-xl tracking-wider text-white">E - C B T &nbsp; A I P &nbsp; C L O U D</h1>
             <p class="text-[11px] text-emerald-200 tracking-wide font-medium">UJIAN SEKOLAH - COMPUTER BASED TEST MANDIRI</p>
           </div>
-        </div>
+        </a>
 
         <!-- Navigation Menu -->
         <nav class="hidden md:flex items-center gap-6 text-sm font-bold tracking-wider">
-          <a href="#beranda" class="text-amber-300 border-b-2 border-amber-300 pb-1">BERANDA</a>
-          <a href="#siswa" onclick="alert('Menu Siswa akan kita hubungkan di tahap selanjutnya!')" class="hover:text-amber-300 transition-colors">SISWA</a>
-          <a href="#guru" onclick="alert('Menu Guru akan kita hubungkan di tahap selanjutnya!')" class="hover:text-amber-300 transition-colors">GURU</a>
-          <a href="#admin" onclick="alert('Menu Admin akan kita hubungkan di tahap selanjutnya!')" class="hover:text-amber-300 transition-colors">ADMIN</a>
+          <a href="index.html" class="text-amber-300 border-b-2 border-amber-300 pb-1">BERANDA</a>
+          <a href="siswa/index.html" class="hover:text-amber-300 transition-colors">SISWA</a>
+          <a href="guru/index.html" class="hover:text-amber-300 transition-colors">GURU</a>
+          <a href="admin/index.html" class="hover:text-amber-300 transition-colors">ADMIN</a>
         </nav>
 
         <!-- Mobile Menu Button -->
@@ -59,10 +58,10 @@
 
     <!-- Mobile Dropdown Navigation -->
     <div id="mobile-menu" class="hidden md:hidden bg-[#0d3b36] border-t border-emerald-800 px-4 pt-2 pb-4 space-y-2 text-sm font-bold">
-      <a href="#beranda" class="block py-2 text-amber-300">BERANDA</a>
-      <a href="#siswa" onclick="alert('Menu Siswa')" class="block py-2 text-white hover:text-amber-300">SISWA</a>
-      <a href="#guru" onclick="alert('Menu Guru')" class="block py-2 text-white hover:text-amber-300">GURU</a>
-      <a href="#admin" onclick="alert('Menu Admin')" class="block py-2 text-white hover:text-amber-300">ADMIN</a>
+      <a href="index.html" class="block py-2 text-amber-300">BERANDA</a>
+      <a href="siswa/index.html" class="block py-2 text-white hover:text-amber-300">SISWA</a>
+      <a href="guru/index.html" class="block py-2 text-white hover:text-amber-300">GURU</a>
+      <a href="admin/index.html" class="block py-2 text-white hover:text-amber-300">ADMIN</a>
     </div>
   </header>
 
@@ -88,12 +87,12 @@
 
       <!-- Quick Action Buttons -->
       <div class="pt-8 flex flex-wrap justify-center gap-4">
-        <button onclick="alert('Menuju Login Siswa')" class="bg-[#0f4c42] hover:bg-[#0d3b36] text-white px-8 py-3.5 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 text-sm uppercase tracking-wider">
+        <a href="siswa/index.html" class="bg-[#0f4c42] hover:bg-[#0d3b36] text-white px-8 py-3.5 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 text-sm uppercase tracking-wider inline-block">
           Masuk Ujian Siswa
-        </button>
-        <button onclick="alert('Menuju Portal Guru/Admin')" class="bg-white hover:bg-slate-50 text-[#0f4c42] border-2 border-[#0f4c42] px-8 py-3.5 rounded-xl font-bold shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 text-sm uppercase tracking-wider">
+        </a>
+        <a href="guru/index.html" class="bg-white hover:bg-slate-50 text-[#0f4c42] border-2 border-[#0f4c42] px-8 py-3.5 rounded-xl font-bold shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 text-sm uppercase tracking-wider inline-block">
           Portal Guru & Admin
-        </button>
+        </a>
       </div>
 
     </div>
@@ -103,7 +102,7 @@
   <footer class="bg-white border-t border-slate-300 py-6 text-center shadow-inner">
     <div class="max-w-7xl mx-auto px-4 flex flex-col items-center justify-center gap-2">
       <!-- Logo Bawah / Lambang Sekolah -->
-      <img src="aset/aip 1.png" alt="Logo MTs Al Ishlah Panambangan" class="w-10 h-10 object-contain" onerror="this.onerror=null; this.src='https://cdn-icons-png.flaticon.com/512/2991/2991108.png';">
+      <img src="../aset/aip 1.png" alt="Logo MTs Al Ishlah Panambangan" class="w-10 h-10 object-contain" onerror="this.onerror=null; this.src='https://cdn-icons-png.flaticon.com/512/2991/2991108.png';">
       <p class="text-xs sm:text-sm font-bold text-slate-700 tracking-wider uppercase">
         AIP CLOUD – MTS AL ISHLAH PANAMBANGAN @ 2026 – APLIKASI UJIAN BERBASIS KOMPUTER
       </p>
