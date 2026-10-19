@@ -8,12 +8,14 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- MathJax CDN untuk Render Rumus Matematika -->
+  <!-- MathJax CDN -->
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" id="MathJax-script" async></script>
-  <!-- Font Display -->
+  <!-- Mammoth JS (Untuk Membaca File Word .docx di Browser) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+  <!-- Font Serif Display & Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
   <!-- Firebase Compatibility SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -21,33 +23,33 @@
 
   <style>
     body { font-family: 'Inter', sans-serif; }
+    .font-hero { font-family: 'Playfair Display', serif; }
   </style>
 </head>
 <body class="bg-slate-200 min-h-screen flex flex-col justify-between text-slate-800">
 
-  <!-- Toast Notification Container -->
   <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none"></div>
 
-  <!-- Dynamic Modal Container -->
   <div id="modal-container" class="fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
     <div id="modal-content" class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 transform transition-all scale-95 opacity-0 max-h-[90vh] overflow-y-auto"></div>
   </div>
+
+  <!-- Hidden File Input khusus dokumen Microsoft Word (.docx) -->
+  <input type="file" id="import-soal-doc" accept=".docx" class="hidden" onchange="window.guruApp.handleUploadDocxTemplate(event)">
 
   <!-- HEADER / NAVBAR -->
   <header class="bg-[#0f4c42] text-white shadow-md sticky top-0 z-30">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex justify-between items-center h-20">
         
-        <!-- Logo & Judul Kiri -->
         <a href="../index.html" class="flex items-center gap-3">
           <img src="../aset/aip%201.png" alt="Logo AIP Cloud" class="w-12 h-12 object-contain drop-shadow" onerror="this.onerror=null; this.src='https://cdn-icons-png.flaticon.com/512/2991/2991108.png';">
           <div>
-            <h1 class="font-bold text-xl tracking-wider text-white">E - C B T &nbsp; A I P &nbsp; C L O U D</h1>
-            <p class="text-[11px] text-emerald-200 tracking-wide font-medium">PORTAL GURU - KELOLA SOAL & NILAI UJIAN</p>
+            <h1 class="font-hero font-black text-xl sm:text-2xl tracking-wider text-white">E - C B T &nbsp; A I P &nbsp; C L O U D</h1>
+            <p class="text-[10px] sm:text-[11px] text-emerald-200 tracking-wide font-medium">PORTAL GURU - KELOLA SOAL & NILAI UJIAN</p>
           </div>
         </a>
 
-        <!-- Navigation Header -->
         <nav id="nav-menu" class="flex items-center gap-4 text-sm font-bold tracking-wider">
           <a href="../index.html" id="btn-nav-beranda" class="hover:text-amber-300 transition-colors">BERANDA</a>
           <button id="btn-nav-login" onclick="window.guruApp.openLoginModal()" class="text-amber-300 border-b-2 border-amber-300 pb-1">LOGIN GURU</button>
@@ -125,6 +127,8 @@
       constructor() {
         this.activeTab = 'soal';
         this.activeGuru = null;
+        this.bankConfig = null;
+        this.generatedSlots = []; 
         DBController.initListener(() => this.render());
       }
 
@@ -138,21 +142,6 @@
         toast.innerText = msg;
         container.appendChild(toast);
         setTimeout(() => toast.remove(), 3000);
-      }
-
-      showModal(html) {
-        const container = document.getElementById('modal-container');
-        const content = document.getElementById('modal-content');
-        content.innerHTML = html;
-        container.classList.remove('hidden');
-        setTimeout(() => content.classList.remove('scale-95', 'opacity-0'), 10);
-      }
-
-      closeModal() {
-        const container = document.getElementById('modal-container');
-        const content = document.getElementById('modal-content');
-        content.classList.add('scale-95', 'opacity-0');
-        setTimeout(() => container.classList.add('hidden'), 200);
       }
 
       openLoginModal() {
@@ -185,6 +174,21 @@
         if (window.lucide) lucide.createIcons();
       }
 
+      showModal(html) {
+        const container = document.getElementById('modal-container');
+        const content = document.getElementById('modal-content');
+        content.innerHTML = html;
+        container.classList.remove('hidden');
+        setTimeout(() => content.classList.remove('scale-95', 'opacity-0'), 10);
+      }
+
+      closeModal() {
+        const container = document.getElementById('modal-container');
+        const content = document.getElementById('modal-content');
+        content.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => container.classList.add('hidden'), 200);
+      }
+
       handleLogin(e) {
         e.preventDefault();
         const u = document.getElementById('g-user').value.trim();
@@ -205,6 +209,8 @@
 
       logout() {
         this.activeGuru = null;
+        this.bankConfig = null;
+        this.generatedSlots = [];
         this.showToast('Berhasil keluar');
         this.render();
       }
@@ -269,7 +275,6 @@
         const tab = this.activeTab;
 
         return `
-          <!-- CAPSULE NAV TABS -->
           <div class="bg-white/80 p-2 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-center gap-2 flex-wrap max-w-xl mx-auto">
             <button onclick="window.guruApp.setTab('soal')" class="px-6 py-2 rounded-xl text-xs font-bold uppercase transition-all ${tab === 'soal' ? 'bg-slate-300/80 text-slate-800 shadow-inner' : 'bg-slate-200/50 text-slate-600 hover:bg-slate-200'}">
               BANK SOAL
@@ -279,55 +284,41 @@
             </button>
           </div>
 
-          <!-- TAB CONTENT -->
           ${tab === 'soal' ? this.renderTabSoalContent() : ''}
           ${tab === 'nilai' ? this.renderTabNilaiContent() : ''}
         `;
       }
 
       renderTabSoalContent() {
-        const db = this.db;
-        const questions = db.questions || [];
-
-        return `
-          <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
-            <div class="flex justify-between items-center">
-              <div>
-                <h3 class="font-bold text-slate-900 text-sm">Kelola Bank Soal Realtime</h3>
-                <p class="text-xs text-slate-500">Total Soal Terinput: <b>${questions.length} Soal</b></p>
-              </div>
-              <button onclick="window.guruApp.openAddSoalModal()" class="bg-[#0f4c42] hover:bg-[#0d3b36] text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1">
-                <i data-lucide="plus" class="w-4 h-4"></i> Tambah Soal Baru
-              </button>
-            </div>
-
-            <div class="space-y-3">
-              ${questions.map((q, idx) => `
-                <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2 text-xs">
-                  <div class="flex justify-between items-center border-b border-slate-200 pb-2">
-                    <span class="font-bold text-[#0f4c42]">Soal No. ${idx + 1} (${q.type.replace('_', ' ').toUpperCase()})</span>
-                    <div class="flex items-center gap-2">
-                      <span class="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded text-[10px]">Bobot: ${q.score || 20}</span>
-                      <button onclick="window.guruApp.deleteSoal('${q.id}')" class="text-rose-600 hover:text-rose-800 font-bold">Hapus</button>
-                    </div>
-                  </div>
-                  <div class="font-medium text-slate-800">${q.text}</div>${q.imageUrl ? `<img src="${q.imageUrl}" class="max-h-32 rounded border my-1">` : ''}
-                </div>
-              `).join('')}
-              ${questions.length === 0 ? `<p class="text-xs text-slate-400 text-center py-6">Belum ada soal. Klik 'Tambah Soal Baru' untuk mengisi.</p>` : ''}
-            </div>
-          </div>
-        `;
+        if (!this.bankConfig) {
+          return this.renderConfigBankSoalForm();
+        } else {
+          return this.renderFormPembuatanSoal();
+        }
       }
 
-      openAddSoalModal() {
-        this.showModal(`
-          <div class="space-y-4">
-            <h3 class="font-bold text-slate-900 text-sm">Tambah Soal Ujian Baru</h3>
-            <form onsubmit="window.guruApp.saveSoal(event)" class="space-y-3 text-xs">
+      // LANGKAH 1: PENGATURAN JENIS & JUMLAH SOAL
+      renderConfigBankSoalForm() {
+        const subjects = this.activeGuru.subjects || ['Informatika', 'BK'];
+
+        return `
+          <div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm max-w-xl mx-auto space-y-6">
+            <div class="text-center space-y-1 border-b border-slate-100 pb-4">
+              <h3 class="font-bold text-slate-900 text-lg">Pengaturan Bank Soal Baru</h3>
+              <p class="text-xs text-slate-500">Atur Mata Pelajaran, Jenis Soal, dan Jumlah Soal yang Ingin Dibuat</p>
+            </div>
+
+            <form onsubmit="window.guruApp.handleGenerateSlots(event)" class="space-y-4 text-xs">
               <div>
-                <label class="block font-bold text-slate-700 mb-1">Tipe Soal</label>
-                <select id="q-type" onchange="window.guruApp.toggleSoalFormFields(this.value)" class="w-full p-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0f4c42] outline-none font-bold">
+                <label class="block font-bold text-slate-700 mb-1">Pilih Mata Pelajaran</label>
+                <select id="cfg-subj" required class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0f4c42] outline-none font-bold">
+                  ${subjects.map(s => `<option value="${s}">${s}</option>`).join('')}
+                </select>
+              </div>
+
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">Pilih Jenis Soal</label>
+                <select id="cfg-type" required class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0f4c42] outline-none font-bold">
                   <option value="pg_tunggal">Pilihan Ganda Tunggal</option>
                   <option value="pg_kompleks">Pilihan Ganda Kompleks (Banyak Jawaban)</option>
                   <option value="benar_salah">Benar / Salah</option>
@@ -336,91 +327,242 @@
               </div>
 
               <div>
-                <label class="block font-bold text-slate-700 mb-1">Pertanyaan / Teks Soal (Dukung Rumus MathJax: \\(x^2\\))</label>
-                <textarea id="q-text" rows="3" required placeholder="Tuliskan soal di sini..." class="w-full p-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0f4c42] outline-none"></textarea>
+                <label class="block font-bold text-slate-700 mb-1">Jumlah Soal yang Ingin Dibuat</label>
+                <input type="number" id="cfg-count" min="1" max="100" value="5" required placeholder="Contoh: 5, 10, 20" class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0f4c42] outline-none font-bold">
               </div>
 
-              <div>
-                <label class="block font-bold text-slate-700 mb-1">URL Gambar Soal (Opsional)</label>
-                <input type="text" id="q-img" placeholder="https://..." class="w-full p-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0f4c42] outline-none">
-              </div>
-
-              <div id="container-options" class="space-y-2">
-                <label class="block font-bold text-slate-700 mb-1">Pilihan Jawaban (Pisahkan Komma)</label>
-                <input type="text" id="q-opts" placeholder="RAM, CPU, Harddisk, Power Supply" class="w-full p-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0f4c42] outline-none">
-              </div>
-
-              <div id="container-answer">
-                <label class="block font-bold text-slate-700 mb-1">Kunci Jawaban Tepat</label>
-                <input type="text" id="q-ans" placeholder="CPU" class="w-full p-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0f4c42] outline-none">
-              </div>
-
-              <div>
-                <label class="block font-bold text-slate-700 mb-1">Bobot Score Soal</label>
-                <input type="number" id="q-score" value="20" required class="w-full p-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0f4c42] outline-none font-bold">
-              </div>
-
-              <div class="flex justify-end gap-2 pt-2">
-                <button type="button" onclick="window.guruApp.closeModal()" class="px-4 py-2 rounded-xl font-bold text-slate-500 bg-slate-100">Batal</button>
-                <button type="submit" class="px-5 py-2 rounded-xl font-bold text-white bg-[#0f4c42]">Simpan Soal ke Cloud</button>
-              </div>
+              <button type="submit" class="w-full bg-[#0f4c42] hover:bg-[#0d3b36] text-white py-3.5 rounded-xl font-bold uppercase tracking-wider shadow-md transition-all">
+                Buat Template Soal &rarr;
+              </button>
             </form>
           </div>
-        `);
+        `;
       }
 
-      toggleSoalFormFields(type) {
-        const cOpts = document.getElementById('container-options');
-        const cAns = document.getElementById('container-answer');
-        if (type === 'esai') {
-          if (cOpts) cOpts.classList.add('hidden');
-          if (cAns) cAns.classList.add('hidden');
-        } else {
-          if (cOpts) cOpts.classList.remove('hidden');
-          if (cAns) cAns.classList.remove('hidden');
+      handleGenerateSlots(e) {
+        e.preventDefault();
+        const subj = document.getElementById('cfg-subj').value;
+        const type = document.getElementById('cfg-type').value;
+        const count = parseInt(document.getElementById('cfg-count').value) || 5;
+
+        this.bankConfig = { subject: subj, type: type, count: count };
+        
+        this.generatedSlots = [];
+        for (let i = 0; i < count; i++) {
+          this.generatedSlots.push({
+            id: 'Q_' + Date.now() + '_' + i,
+            text: '',
+            imageUrl: '',
+            options: type === 'esai' ? [] : ['A', 'B', 'C', 'D'],
+            answer: '',
+            score: Math.round(100 / count)
+          });
+        }
+
+        this.showToast(`Template ${count} soal berhasil dibuat!`);
+        this.render();
+      }
+
+      // LANGKAH 2: FORM ISI SOAL & FITUR UNDUH/UNGGAH WORD (.DOCX)
+      renderFormPembuatanSoal() {
+        const cfg = this.bankConfig;
+
+        return `
+          <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+            
+            <div class="flex justify-between items-center flex-wrap gap-3 border-b border-slate-200 pb-4">
+              <div>
+                <span class="bg-emerald-100 text-emerald-900 text-[10px] font-black uppercase px-2.5 py-1 rounded-full">${cfg.subject}</span>
+                <h3 class="font-bold text-slate-900 text-base mt-1">Template Soal (${cfg.count} Soal - ${cfg.type.replace('_', ' ').toUpperCase()})</h3>
+              </div>
+
+              <!-- DUA OPSI: DOKUMEN WORD (.DOCX) ATAU MANUAL -->
+              <div class="flex items-center gap-2 flex-wrap">
+                <button onclick="window.guruApp.downloadDocxGuide()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1 border border-slate-300">
+                  <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Unduh Panduan Format Word
+                </button>
+                <button onclick="document.getElementById('import-soal-doc').click()" class="bg-blue-50 hover:bg-blue-100 text-blue-800 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1 border border-blue-300">
+                  <i data-lucide="upload-cloud" class="w-3.5 h-3.5"></i> Unggah File Word (.docx)
+                </button>
+                <button onclick="window.guruApp.resetConfig()" class="bg-rose-50 text-rose-700 hover:bg-rose-100 px-3 py-2 rounded-xl text-xs font-bold border border-rose-200">
+                  Ulangi
+                </button>
+              </div>
+            </div>
+
+            <!-- FORM MANUAL DI WEB -->
+            <form onsubmit="window.guruApp.saveAllQuestionsToCloud(event)" class="space-y-6">
+              <div class="space-y-4">
+                ${this.generatedSlots.map((s, idx) => `
+                  <div class="p-5 bg-slate-50 rounded-2xl border border-slate-200 space-y-3 text-xs">
+                    <div class="flex justify-between items-center font-bold text-slate-800 border-b border-slate-200 pb-2">
+                      <span class="text-[#0f4c42]">Soal No. ${idx + 1}</span>
+                      <div class="flex items-center gap-2">
+                        <span>Bobot Nilai:</span>
+                        <input type="number" value="${s.score}" onchange="window.guruApp.updateSlotScore(${idx}, this.value)" class="w-16 p-1 border rounded text-center font-bold">
+                      </div>
+                    </div>
+
+                    <div>
+                      <label class="block font-bold text-slate-700 mb-1">Pertanyaan Soal</label>
+                      <textarea rows="2" required placeholder="Tuliskan isi pertanyaan soal no. ${idx + 1} di sini..." oninput="window.guruApp.updateSlotText(${idx}, this.value)" class="w-full p-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0f4c42] outline-none">${s.text}</textarea>
+                    </div>
+
+                    <div>
+                      <label class="block font-bold text-slate-700 mb-1">URL Gambar (Opsional)</label>
+                      <input type="text" placeholder="https://..." value="${s.imageUrl \vert{}\vert{} ''}" oninput="window.guruApp.updateSlotImage(${idx}, this.value)" class="w-full p-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0f4c42] outline-none">
+                    </div>
+
+                    ${cfg.type !== 'esai' ? `
+                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                        <div>
+                          <label class="block font-bold text-slate-700 mb-1">Pilihan Jawaban (Pisahkan Komma)</label>
+                          <input type="text" value="${s.options.join(', ')}" oninput="window.guruApp.updateSlotOptions(${idx}, this.value)" placeholder="Pilihan A, Pilihan B, Pilihan C, Pilihan D" class="w-full p-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0f4c42] outline-none">
+                        </div>
+                        <div>
+                          <label class="block font-bold text-slate-700 mb-1">Kunci Jawaban Tepat</label>
+                          <input type="text" value="${s.answer || ''}" required oninput="window.guruApp.updateSlotAnswer(${idx}, this.value)" placeholder="Kunci Jawaban" class="w-full p-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0f4c42] outline-none font-bold">
+                        </div>
+                      </div>
+                    ` : ''}
+                  </div>
+                `).join('')}
+              </div>
+
+              <div class="pt-4 border-t border-slate-200 flex justify-end">
+                <button type="submit" class="bg-[#0f4c42] hover:bg-[#0d3b36] text-white px-8 py-3 rounded-xl font-bold uppercase tracking-wider text-xs shadow-lg">
+                  Simpan Semua Soal ke Cloud Realtime
+                </button>
+              </div>
+            </form>
+
+          </div>
+        `;
+      }
+
+      updateSlotText(idx, val) { this.generatedSlots[idx].text = val; }
+      updateSlotImage(idx, val) { this.generatedSlots[idx].imageUrl = val; }
+      updateSlotScore(idx, val) { this.generatedSlots[idx].score = parseFloat(val) || 0; }
+      updateSlotAnswer(idx, val) { this.generatedSlots[idx].answer = val.trim(); }
+      updateSlotOptions(idx, val) { 
+        this.generatedSlots[idx].options = val.split(',').map(s => s.trim()); 
+      }
+
+      resetConfig() {
+        if (confirm('Ulangi pengaturan bank soal?')) {
+          this.bankConfig = null;
+          this.generatedSlots = [];
+          this.render();
         }
       }
 
-      saveSoal(e) {
+      // UNDUH PETUNJUK FORMAT WORD (.DOCX)
+      downloadDocxGuide() {
+        const textContent = `PANDUAN FORMAT SOAL WORD (.DOCX) - E-CBT AIP CLOUD\n\n` +
+          `Ketikkan soal di Microsoft Word dengan format struktur sederhana berikut:\n\n` +
+          `1. Pertanyaan soal nomor pertama\n` +
+          `A. Pilihan jawaban A\n` +
+          `B. Pilihan jawaban B\n` +
+          `C. Pilihan jawaban C\n` +
+          `D. Pilihan jawaban D\n` +
+          `KUNCI: A\n\n` +
+          `2. Pertanyaan soal nomor kedua\n` +
+          `A. Pilihan jawaban A\n` +
+          `B. Pilihan jawaban B\n` +
+          `C. Pilihan jawaban C\n` +
+          `D. Pilihan jawaban D\n` +
+          `KUNCI: B\n`;
+
+        const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.setAttribute("download", "Panduan_Format_Soal_Word.txt");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        this.showToast('File petunjuk format berhasil diunduh!');
+      }
+
+      // UNGGAH DAN BACA FILE WORD (.DOCX) DENGAN MAMMOTH.JS
+      handleUploadDocxTemplate(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          const arrayBuffer = evt.target.result;
+          
+          mammoth.extractRawText({ arrayBuffer: arrayBuffer })
+            .then((result) => {
+              const fullText = result.value;
+              const lines = fullText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+              
+              let parsedSlots = [];
+              let currentSlot = null;
+
+              lines.forEach(line => {
+                // Deteksi nomor soal (contoh: "1. Soal...", "2. Soal...")
+                if (/^\d+[\.\)]/.test(line)) {
+                  if (currentSlot) parsedSlots.push(currentSlot);
+                  currentSlot = {
+                    id: 'Q_' + Date.now() + '_' + parsedSlots.length,
+                    text: line.replace(/^\d+[\.\)]\s*/, ''),
+                    imageUrl: '',
+                    options: [],
+                    answer: '',
+                    score: 20
+                  };
+                } else if (currentSlot) {
+                  if (/^[A-E][\.\)]/i.test(line)) {
+                    currentSlot.options.push(line.replace(/^[A-E][\.\)]\s*/i, ''));
+                  } else if (/^KUNCI:/i.test(line)) {
+                    currentSlot.answer = line.replace(/^KUNCI:\s*/i, '');
+                  }
+                }
+              });
+
+              if (currentSlot) parsedSlots.push(currentSlot);
+
+              if (parsedSlots.length > 0) {
+                this.generatedSlots = parsedSlots;
+                this.bankConfig.count = parsedSlots.length;
+                this.showToast(`Berhasil membaca ${parsedSlots.length} soal dari file Word (.docx)!`);
+                this.render();
+              } else {
+                this.showToast('Gagal mengekstrak soal. Pastikan nomor diawali angka (1. 2. 3.)', 'error');
+              }
+            })
+            .catch((err) => {
+              this.showToast('Error membaca file Word (.docx)', 'error');
+            });
+
+          e.target.value = '';
+        };
+        reader.readAsArrayBuffer(file);
+      }
+
+      saveAllQuestionsToCloud(e) {
         e.preventDefault();
         const db = this.db;
         if (!db.questions) db.questions = [];
 
-        const type = document.getElementById('q-type').value;
-        const text = document.getElementById('q-text').value.trim();
-        const imageUrl = document.getElementById('q-img').value.trim();
-        const score = parseFloat(document.getElementById('q-score').value) || 20;
-
-        let options = [];
-        let answer = '';
-
-        if (type !== 'esai') {
-          const rawOpts = document.getElementById('q-opts').value.trim();
-          options = rawOpts ? rawOpts.split(',').map(s => s.trim()) : [];
-          answer = document.getElementById('q-ans').value.trim();
-        }
-
-        db.questions.push({
-          id: 'Q' + Date.now(),
-          type,
-          text,
-          imageUrl,
-          options,
-          answer,
-          score
+        this.generatedSlots.forEach(s => {
+          db.questions.push({
+            id: s.id,
+            subject: this.bankConfig.subject,
+            type: this.bankConfig.type,
+            text: s.text,
+            imageUrl: s.imageUrl,
+            options: s.options,
+            answer: s.answer,
+            score: s.score
+          });
         });
 
         this.saveDB(db);
-        this.closeModal();
-        this.showToast('Soal baru berhasil tersimpan ke Cloud Realtime!');
-        this.render();
-      }
-
-      deleteSoal(qId) {
-        const db = this.db;
-        db.questions = (db.questions || []).filter(q => q.id !== qId);
-        this.saveDB(db);
-        this.showToast('Soal dihapus!');
+        this.showToast('Semua Soal Berhasil Tersimpan di Cloud Realtime!');
+        this.bankConfig = null;
+        this.generatedSlots = [];
         this.render();
       }
 
