@@ -1002,24 +1002,68 @@
       }
 
       exportToCSV() {
-        const db = this.db;
-        const results = db.examResults || [];
-        let csvContent = "data:text/csv;charset=utf-8,Nama Siswa,Kelas,Mata Pelajaran,Skor PG,Skor Esai,Total Nilai,Status KKM\n";
+  const db = this.db;
+  const results = db.examResults || [];
+  const kkm = db.kkm || 75;
 
-        results.forEach(r => {
-          const status = r.totalScore >= (db.kkm || 75) ? 'LULUS' : 'REMIDI';
-          csvContent += `"${r.studentName}","${r.grade}","${r.subject}",${r.pgScore},${r.essayScore || 0},${r.totalScore},"${status}"\n`;
-        });
+  // Format Tabel HTML yang dibaca Rapi oleh Microsoft Excel
+  let tableContent = `
+    <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+    <head>
+      <meta charset="utf-8">
+      <style>
+        table { border-collapse: collapse; width: 100%; font-family: Arial, sans-serif; }
+        th, td { border: 1px solid #000000; padding: 8px; text-align: left; font-size: 11pt; }
+        th { background-color: #0f4c42; color: #ffffff; font-weight: bold; text-align: center; }
+        td.center { text-align: center; }
+        td.bold { font-weight: bold; }
+      </style>
+    </head>
+    <body>
+      <h3>LAPORAN HASIL UJIAN - E-CBT AIP CLOUD</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>No</th>
+            <th>Nama</th>
+            <th>Kelas</th>
+            <th>Nilai</th>
+            <th>Status KKM</th>
+          </tr>
+        </thead>
+        <tbody>
+  `;
 
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `Laporan_Nilai_CBT.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        this.showToast('Laporan Nilai CSV berhasil diunduh!');
-      }
+  results.forEach((r, idx) => {
+    const status = r.totalScore >= kkm ? 'LULUS' : 'REMIDI';
+    tableContent += `
+      <tr>
+        <td class="center">${idx + 1}</td>
+        <td class="bold">${r.studentName}</td>
+        <td class="center">Kelas ${r.grade}</td>
+        <td class="center bold">${r.totalScore}</td>
+        <td class="center" style="color: ${r.totalScore >= kkm ? '#047857' : '#b91c1c'}; font-weight: bold;">${status}</td>
+      </tr>
+    `;
+  });
+
+  tableContent += `
+        </tbody>
+      </table>
+    </body>
+    </html>
+  `;
+
+  const blob = new Blob(['\ufeff' + tableContent], { type: 'application/vnd.ms-excel' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  link.setAttribute("download", `Laporan_Nilai_Siswa.xls`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  this.showToast('Laporan Nilai Excel berhasil diunduh!');
+}
 
       renderTabAnalisis() {
         const db = this.db;
