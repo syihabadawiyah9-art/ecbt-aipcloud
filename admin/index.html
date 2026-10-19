@@ -13,6 +13,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
+  <!-- Firebase Web SDK Compatibility Mode -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
   <style>
     body {
       font-family: 'Inter', sans-serif;
@@ -43,7 +47,7 @@
         
         <!-- Logo & Judul Kiri -->
         <a href="../index.html" class="flex items-center gap-3">
-          <img src="../aset/mts.png" alt="Logo Kemenag" class="w-12 h-12 object-contain drop-shadow">
+          <img src="../aset/aip%201.png" alt="Logo AIP Cloud" class="w-12 h-12 object-contain drop-shadow" onerror="this.onerror=null; this.src='https://cdn-icons-png.flaticon.com/512/2991/2991108.png';">
           <div>
             <h1 class="font-bold text-xl tracking-wider text-white">E - C B T &nbsp; A I P &nbsp; C L O U D</h1>
             <p class="text-[11px] text-emerald-200 tracking-wide font-medium">UJIAN SEKOLAH - COMPUTER BASED TEST MANDIRI</p>
@@ -79,7 +83,7 @@
   <!-- FOOTER -->
   <footer class="bg-white border-t border-slate-300 py-6 text-center shadow-inner">
     <div class="max-w-7xl mx-auto px-4 flex flex-col items-center justify-center gap-2">
-      <img src="../aset/aip 1.png" alt="Logo MTs Al Ishlah Panambangan" class="w-10 h-10 object-contain">
+      <img src="../aset/mts.png" alt="Logo MTs Al Ishlah Panambangan" class="w-10 h-10 object-contain" onerror="this.onerror=null; this.src='https://cdn-icons-png.flaticon.com/512/2991/2991108.png';">
       <p class="text-xs sm:text-sm font-bold text-slate-700 tracking-wider uppercase">
         AIP CLOUD – MTS AL ISHLAH PANAMBANGAN @ 2026 – APLIKASI UJIAN BERBASIS KOMPUTER
       </p>
@@ -87,7 +91,22 @@
   </footer>
 
   <script>
-    const STORAGE_KEY = 'e_cbt_aip_cloud_db';
+    // Inisialisasi Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyAQlu_WVDBVlmSg4C83euSkEs-SbaxbBbU",
+      authDomain: "ecbt-aipcloud.firebaseapp.com",
+      databaseURL: "https://ecbt-aipcloud-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "ecbt-aipcloud",
+      storageBucket: "ecbt-aipcloud.firebasestorage.app",
+      messagingSenderId: "810156327221",
+      appId: "1:810156327221:web:7bf52383c0d89fac228c7c",
+      measurementId: "G-0JP7K0DFY7"
+    };
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const rtdb = firebase.database();
 
     const initialData = {
       adminUser: 'adminutama',
@@ -105,26 +124,49 @@
         { id: 'SCH01', subject: 'Informatika', grade: '7', date: '2026-10-19', startTime: '07:00', endTime: '15:00', token: 'AIP789' },
         { id: 'SCH02', subject: 'IPA', grade: '8', date: '2026-10-20', startTime: '08:00', endTime: '10:00', token: 'AIP456' }
       ],
+      questions: [],
+      examResults: [],
       adminSession: false
     };
 
     class DBController {
+      static state = { ...initialData };
+
+      static init(onUpdateCallback) {
+        rtdb.ref('cbt_database').on('value', (snapshot) => {
+          const val = snapshot.val();
+          if (!val) {
+            rtdb.ref('cbt_database').set(initialData);
+            DBController.state = { ...initialData };
+          } else {
+            DBController.state = {
+              ...initialData,
+              ...val,
+              teachers: val.teachers || [],
+              students: val.students || [],
+              schedules: val.schedules || [],
+              questions: val.questions || [],
+              examResults: val.examResults || []
+            };
+          }
+          if (onUpdateCallback) onUpdateCallback();
+        });
+      }
+
       static get() {
-        if (!localStorage.getItem(STORAGE_KEY)) {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(initialData));
-        }
-        return JSON.parse(localStorage.getItem(STORAGE_KEY));
+        return DBController.state;
       }
 
       static save(data) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        DBController.state = { ...data };
+        rtdb.ref('cbt_database').set(data);
       }
     }
 
     class AdminApp {
       constructor() {
         this.activeTab = 'dashboard';
-        this.render();
+        DBController.init(() => this.render());
       }
 
       get db() {
@@ -357,7 +399,7 @@
             <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center justify-between">
               <div>
                 <p class="text-xs font-extrabold text-slate-700 uppercase tracking-wide mb-1">TOTAL GURU</p>
-                <p class="text-4xl font-black text-slate-900">${db.teachers.length}</p>
+                <p class="text-4xl font-black text-slate-900">${(db.teachers || []).length}</p>
               </div>
               <div class="p-3 bg-emerald-800 text-white rounded-2xl">
                 <i data-lucide="user" class="w-8 h-8"></i>
@@ -367,7 +409,7 @@
             <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center justify-between">
               <div>
                 <p class="text-xs font-extrabold text-slate-700 uppercase tracking-wide mb-1">TOTAL SISWA TERDAFTAR</p>
-                <p class="text-4xl font-black text-slate-900">${db.students.length}</p>
+                <p class="text-4xl font-black text-slate-900">${(db.students || []).length}</p>
               </div>
               <div class="p-3 bg-emerald-800 text-white rounded-2xl">
                 <i data-lucide="users" class="w-8 h-8"></i>
@@ -377,7 +419,7 @@
             <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center justify-between">
               <div>
                 <p class="text-xs font-extrabold text-slate-700 uppercase tracking-wide mb-1">UJIAN SEDANG AKTIF</p>
-                <p class="text-4xl font-black text-slate-900">${db.schedules.length}</p>
+                <p class="text-4xl font-black text-slate-900">${(db.schedules || []).length}</p>
               </div>
               <div class="p-3 bg-emerald-800 text-white rounded-2xl">
                 <i data-lucide="clock" class="w-8 h-8"></i>
@@ -387,11 +429,11 @@
 
           <div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm space-y-3">
             <div class="flex items-center gap-2 text-emerald-800">
-              <i data-lucide="info" class="w-6 h-6"></i>
-              <h3 class="font-bold text-slate-900 text-base">Informasi Sistem CBT</h3>
+              <i data-lucide="wifi" class="w-6 h-6"></i>
+              <h3 class="font-bold text-slate-900 text-base">Sistem Realtime Firebase Terhubung</h3>
             </div>
             <p class="text-xs leading-relaxed text-slate-600 font-medium">
-              Sistem ini beroperasi 100% Client-side menggunakan LocalStorage. Semua data seperti akun pengguna, jadwal ujian, bank soal, dan nilai disimpan secara offline di browser ini. Anda dapat menguji seluruh fungsi mulai dari pembuatan guru, pengisian bank soal, pengerjaan oleh siswa, hingga rilis nilai tanpa butuh database server.
+              Sistem ini beroperasi 100% Realtime Cloud menggunakan Firebase Realtime Database. Seluruh data akun guru, akun siswa, jadwal ujian, bank soal, dan nilai jawaban siswa tersinkronisasi secara otomatis di seluruh perangkat secara live.
             </p>
           </div>
         `;
@@ -426,12 +468,13 @@
             if (index === 0 || !line.trim()) return;
             const cols = line.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
             if (cols.length >= 3) {
-              const id = cols[0] || '00' + (db.teachers.length + 1);
+              const id = cols[0] || '00' + ((db.teachers || []).length + 1);
               const name = cols[1];
               const username = cols[2];
               const password = cols[3] || '123';
 
-              if (name && username && !db.teachers.some(t => t.username === username)) {
+              if (name && username && !(db.teachers || []).some(t => t.username === username)) {
+                if (!db.teachers) db.teachers = [];
                 db.teachers.push({ id, name, username, password, subjects: [] });
                 addedCount++;
               }
@@ -448,6 +491,7 @@
 
       renderTabGuruContent() {
         const db = this.db;
+        const teachers = db.teachers || [];
         return `
           <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
             <div class="flex justify-between items-center flex-wrap gap-2">
@@ -478,7 +522,7 @@
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
-                  ${db.teachers.map(t => `
+                  ${teachers.map(t => `
                     <tr>
                       <td class="p-3 text-slate-400 font-mono">${t.id}</td>
                       <td class="p-3 font-bold text-slate-900">${t.name}</td>
@@ -531,7 +575,7 @@
         e.preventDefault();
         const db = this.db;
         const newSubj = document.getElementById('add-subj-input').value.trim();
-        const teacher = db.teachers.find(t => t.id === guruId);
+        const teacher = (db.teachers || []).find(t => t.id === guruId);
 
         if (teacher) {
           if (!teacher.subjects) teacher.subjects = [];
@@ -547,7 +591,7 @@
 
       removeSubjectFromGuru(guruId, subjName) {
         const db = this.db;
-        const teacher = db.teachers.find(t => t.id === guruId);
+        const teacher = (db.teachers || []).find(t => t.id === guruId);
         if (teacher && teacher.subjects) {
           teacher.subjects = teacher.subjects.filter(s => s !== subjName);
           this.saveDB(db);
@@ -585,13 +629,14 @@
             if (index === 0 || !line.trim()) return;
             const cols = line.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
             if (cols.length >= 4) {
-              const id = cols[0] || '00' + (db.students.length + 1);
+              const id = cols[0] || '00' + ((db.students || []).length + 1);
               const name = cols[1];
               const grade = cols[2] || '7';
               const username = cols[3];
               const password = cols[4] || '123';
 
-              if (name && username && !db.students.some(s => s.username === username)) {
+              if (name && username && !(db.students || []).some(s => s.username === username)) {
+                if (!db.students) db.students = [];
                 db.students.push({ id, name, grade, username, password });
                 addedCount++;
               }
@@ -608,6 +653,7 @@
 
       renderTabSiswaContent() {
         const db = this.db;
+        const students = db.students || [];
         return `
           <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
             <div class="flex justify-between items-center flex-wrap gap-2">
@@ -638,7 +684,7 @@
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
-                  ${db.students.map(s => `
+                  ${students.map(s => `
                     <tr>
                       <td class="p-3 text-slate-400 font-mono">${s.id}</td>
                       <td class="p-3 font-bold text-slate-900">${s.name}</td>
@@ -659,6 +705,7 @@
 
       renderTabJadwalContent() {
         const db = this.db;
+        const schedules = db.schedules || [];
         return `
           <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
             <div class="flex justify-between items-center">
@@ -681,214 +728,12 @@
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
-                  ${db.schedules.map(sc => `
+                  ${schedules.map(sc => `
                     <tr>
                       <td class="p-3 font-bold text-slate-900">${sc.subject}</td>
                       <td class="p-3">Kelas ${sc.grade}</td>
                       <td class="p-3 font-medium">${sc.date || '-'}</td>
-                      <td class="p-3 font-mono">${(sc.startTime) ? sc.startTime : '00:00'} - ${(sc.endTime) ? sc.endTime : '23:59'}</td>
+                      <td class="p-3 font-mono">${sc.startTime \vert{}\vert{} '00:00'} -${sc.endTime || '23:59'}</td>
                       <td class="p-3"><code class="bg-emerald-50 text-emerald-800 font-mono font-bold px-2 py-1 rounded border border-emerald-200">${sc.token}</code></td>
                       <td class="p-3 text-right">
-                        <button onclick="window.adminApp.deleteJadwal('${sc.id}')" class="text-rose-600 hover:text-rose-800 font-bold">Hapus</button>
-                      </td>
-                    </tr>
-                  `).join('')}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        `;
-      }
-
-      openAddGuruModal() {
-        this.showModal(`
-          <div class="space-y-4">
-            <h3 class="font-bold text-slate-900 text-sm">Tambah Data Guru Manual</h3>
-            <form onsubmit="window.adminApp.saveGuru(event)" class="space-y-3">
-              <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1">ID / NIP</label>
-                <input type="text" id="g-id" required placeholder="003" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#0f4c42] outline-none">
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1">Nama Guru Lengkap</label>
-                <input type="text" id="g-name" required placeholder="Dr. Budi Santoso, M.Pd" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#0f4c42] outline-none">
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1">Username Login</label>
-                <input type="text" id="g-user" required placeholder="guru_ipa" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#0f4c42] outline-none">
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1">Password</label>
-                <input type="text" id="g-pass" value="123" required class="w-full p-2.5 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#0f4c42] outline-none">
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1">Mata Pelajaran (Pisahkan Komma, Boleh Kosong)</label>
-                <input type="text" id="g-subj" placeholder="Informatika, BK" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#0f4c42] outline-none">
-              </div>
-              <div class="flex justify-end gap-2 pt-2">
-                <button type="button" onclick="window.adminApp.closeModal()" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 bg-slate-100">Batal</button>
-                <button type="submit" class="px-5 py-2 rounded-xl text-xs font-bold text-white bg-[#0f4c42]">Simpan Data</button>
-              </div>
-            </form>
-          </div>
-        `);
-      }
-
-      saveGuru(e) {
-        e.preventDefault();
-        const db = this.db;
-        const rawSubj = document.getElementById('g-subj').value.trim();
-        const subjectsArr = rawSubj ? rawSubj.split(',').map(s => s.trim()) : [];
-
-        db.teachers.push({
-          id: document.getElementById('g-id').value.trim() || ('00' + (db.teachers.length + 1)),
-          name: document.getElementById('g-name').value.trim(),
-          username: document.getElementById('g-user').value.trim(),
-          password: document.getElementById('g-pass').value.trim(),
-          subjects: subjectsArr
-        });
-        this.saveDB(db);
-        this.closeModal();
-        this.showToast('Guru berhasil ditambahkan!');
-        this.render();
-      }
-
-      deleteGuru(id) {
-        const db = this.db;
-        db.teachers = db.teachers.filter(t => t.id !== id);
-        this.saveDB(db);
-        this.showToast('Data guru dihapus!');
-        this.render();
-      }
-
-      openAddSiswaModal() {
-        this.showModal(`
-          <div class="space-y-4">
-            <h3 class="font-bold text-slate-900 text-sm">Tambah Data Siswa Manual</h3>
-            <form onsubmit="window.adminApp.saveSiswa(event)" class="space-y-3">
-              <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1">ID / NISN</label>
-                <input type="text" id="s-id" required placeholder="003" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#0f4c42] outline-none">
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1">Nama Siswa</label>
-                <input type="text" id="s-name" required placeholder="Ahmad Rizky" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#0f4c42] outline-none">
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1">Kelas</label>
-                <input type="text" id="s-grade" required placeholder="7" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#0f4c42] outline-none">
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1">Username Login</label>
-                <input type="text" id="s-user" required placeholder="siswa01" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#0f4c42] outline-none">
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1">Password</label>
-                <input type="text" id="s-pass" value="123" required class="w-full p-2.5 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#0f4c42] outline-none">
-              </div>
-              <div class="flex justify-end gap-2 pt-2">
-                <button type="button" onclick="window.adminApp.closeModal()" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 bg-slate-100">Batal</button>
-                <button type="submit" class="px-5 py-2 rounded-xl text-xs font-bold text-white bg-[#0f4c42]">Simpan Siswa</button>
-              </div>
-            </form>
-          </div>
-        `);
-      }
-
-      saveSiswa(e) {
-        e.preventDefault();
-        const db = this.db;
-        db.students.push({
-          id: document.getElementById('s-id').value.trim() || ('00' + (db.students.length + 1)),
-          name: document.getElementById('s-name').value.trim(),
-          grade: document.getElementById('s-grade').value.trim(),
-          username: document.getElementById('s-user').value.trim(),
-          password: document.getElementById('s-pass').value.trim()
-        });
-        this.saveDB(db);
-        this.closeModal();
-        this.showToast('Siswa berhasil ditambahkan!');
-        this.render();
-      }
-
-      deleteSiswa(id) {
-        const db = this.db;
-        db.students = db.students.filter(s => s.id !== id);
-        this.saveDB(db);
-        this.showToast('Data siswa dihapus!');
-        this.render();
-      }
-
-      openAddJadwalModal() {
-        this.showModal(`
-          <div class="space-y-4">
-            <h3 class="font-bold text-slate-900 text-sm">Buat Jadwal Ujian & Token Baru</h3>
-            <form onsubmit="window.adminApp.saveJadwal(event)" class="space-y-3">
-              <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1">Mata Pelajaran</label>
-                <input type="text" id="j-subj" required placeholder="Bahasa Indonesia" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#0f4c42] outline-none">
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1">Kelas Target</label>
-                <input type="text" id="j-grade" required placeholder="7" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#0f4c42] outline-none">
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1">Tanggal Ujian</label>
-                <input type="date" id="j-date" required class="w-full p-2.5 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#0f4c42] outline-none">
-              </div>
-              <div class="grid grid-cols-2 gap-2">
-                <div>
-                  <label class="block text-xs font-bold text-slate-700 mb-1">Jam Mulai</label>
-                  <input type="time" id="j-start" required class="w-full p-2.5 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#0f4c42] outline-none">
-                </div>
-                <div>
-                  <label class="block text-xs font-bold text-slate-700 mb-1">Jam Selesai</label>
-                  <input type="time" id="j-end" required class="w-full p-2.5 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#0f4c42] outline-none">
-                </div>
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1">Token Ujian</label>
-                <input type="text" id="j-token" required placeholder="AIP789" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs font-mono font-bold uppercase focus:ring-2 focus:ring-[#0f4c42] outline-none">
-              </div>
-              <div class="flex justify-end gap-2 pt-2">
-                <button type="button" onclick="window.adminApp.closeModal()" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 bg-slate-100">Batal</button>
-                <button type="submit" class="px-5 py-2 rounded-xl text-xs font-bold text-white bg-[#0f4c42]">Simpan Jadwal</button>
-              </div>
-            </form>
-          </div>
-        `);
-      }
-
-      saveJadwal(e) {
-        e.preventDefault();
-        const db = this.db;
-        db.schedules.push({
-          id: 'SCH' + Date.now(),
-          subject: document.getElementById('j-subj').value.trim(),
-          grade: document.getElementById('j-grade').value.trim(),
-          date: document.getElementById('j-date').value,
-          startTime: document.getElementById('j-start').value,
-          endTime: document.getElementById('j-end').value,
-          token: document.getElementById('j-token').value.trim().toUpperCase()
-        });
-        this.saveDB(db);
-        this.closeModal();
-        this.showToast('Jadwal ujian berhasil ditambahkan!');
-        this.render();
-      }
-
-      deleteJadwal(id) {
-        const db = this.db;
-        db.schedules = db.schedules.filter(sc => sc.id !== id);
-        this.saveDB(db);
-        this.showToast('Jadwal dihapus!');
-        this.render();
-      }
-    }
-
-    window.addEventListener('DOMContentLoaded', () => {
-      window.adminApp = new AdminApp();
-    });
-  </script>
-</body>
-</html>
+                        <button onclick="window.adminApp.deleteJadwal('${sc.id}')" class="text-rose-600 hover:text-rose-80
