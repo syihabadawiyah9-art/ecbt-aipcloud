@@ -1,1 +1,580 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>E-CBT AIP CLOUD - Ujian Siswa</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- MathJax CDN untuk Render Rumus Matematika -->
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" id="MathJax-script" async></script>
+  <!-- Font Display -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-200 min-h-screen flex flex-col justify-between text-slate-800">
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none"></div>
+
+  <!-- HEADER NAVBAR -->
+  <header class="bg-[#0f4c42] text-white shadow-md sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center h-20">
+        
+        <!-- HEADER KIRI LOGO & JUDUL -->
+        <a href="index.html" class="flex items-center gap-3">
+          <img src="aset/logo-kemenag.png" alt="Logo Kemenag" class="w-12 h-12 object-contain drop-shadow" onerror="this.onerror=null; this.src='https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Logo_Kementerian_Agama_Republik_Indonesia_new_version.png/600px-Logo_Kementerian_Agama_Republik_Indonesia_new_version.png';">
+          <div>
+            <h1 class="font-bold text-lg sm:text-xl tracking-wider text-white">E - C B T &nbsp; A I P &nbsp; C L O U D</h1>
+            <p class="text-[10px] sm:text-[11px] text-emerald-200 tracking-wide font-medium">UJIAN SEKOLAH - COMPUTER BASED TEST MANDIRI</p>
+          </div>
+        </a>
+
+        <!-- HEADER KANAN: PROFIL PESERTA DENGAN MENU LOGOUT SAAT DIKLIK -->
+        <div id="header-student-info" class="hidden relative">
+          <button onclick="window.studentApp.toggleUserDropdown()" class="flex items-center gap-2 bg-emerald-900/80 hover:bg-emerald-900 px-3 py-1.5 rounded-xl border border-emerald-700 transition-all text-right">
+            <div>
+              <p id="txt-welcome-student" class="text-xs font-bold text-amber-300"></p>
+              <p id="txt-subject-info" class="text-[10px] text-emerald-100 font-medium"></p>
+            </div>
+            <i data-lucide="chevron-down" class="w-4 h-4 text-emerald-200"></i>
+          </button>
+
+          <!-- DROPDOWN LOGOUT -->
+          <div id="user-dropdown-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-200 py-2 z-40">
+            <button onclick="window.studentApp.logoutStudent()" class="w-full text-left px-4 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-2">
+              <i data-lucide="log-out" class="w-4 h-4"></i> Keluar / Logout
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN DYNAMIC VIEW -->
+  <main id="app-view" class="flex-grow flex items-center justify-center p-4 sm:p-8">
+    <!-- Rendered via JS -->
+  </main>
+
+  <!-- FOOTER (PERSIS HALAMAN GURU & ADMIN) -->
+  <footer class="bg-white border-t border-slate-300 py-6 text-center shadow-inner">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col items-center justify-center gap-2">
+      <img src="aset/logo-mts.png" alt="Logo MTs Al Ishlah Panambangan" class="w-10 h-10 object-contain" onerror="this.onerror=null; this.src='https://cdn-icons-png.flaticon.com/512/2991/2991108.png';">
+      <p class="text-xs sm:text-sm font-bold text-slate-700 tracking-wider uppercase">
+        AIP CLOUD – MTS AL ISHLAH PANAMBANGAN @ 2026 – APLIKASI UJIAN BERBASIS KOMPUTER
+      </p>
+    </div>
+  </footer>
+
+  <script>
+    const STORAGE_KEY = 'e_cbt_aip_cloud_db';
+
+    const defaultInitialData = {
+      students: [
+        { id: '001', username: 'syihabadaw', name: 'Muhammad Syihabuddin', grade: '7', password: '123' },
+        { id: '002', username: 'naila32', name: 'Naila', grade: '8', password: '123' }
+      ],
+      schedules: [
+        { id: 'SCH01', subject: 'Informatika', grade: '7', token: 'AIP789' }
+      ],
+      questions: [
+        {
+          id: 'Q1',
+          type: 'pg_tunggal',
+          text: 'Perangkat keras komputer yang berfungsi sebagai otak pemroses utama adalah... \\((CPU)\\)',
+          imageUrl: '',
+          options: ['RAM', 'Processor (CPU)', 'Harddisk', 'Power Supply'],
+          answer: 'Processor (CPU)',
+          score: 20
+        },
+        {
+          id: 'Q2',
+          type: 'pg_kompleks',
+          text: 'Pilihlah dua contoh perangkat masukan (input device) komputer:',
+          imageUrl: '',
+          options: ['Mouse', 'Monitor', 'Keyboard', 'Printer'],
+          answer: ['Mouse', 'Keyboard'],
+          score: 20
+        },
+        {
+          id: 'Q3',
+          type: 'benar_salah',
+          text: 'Monitor adalah contoh dari perangkat keras masukan (Input Device).',
+          imageUrl: '',
+          options: ['Benar', 'Salah'],
+          answer: 'Salah',
+          score: 20
+        },
+        {
+          id: 'Q4',
+          type: 'menjodohkan',
+          text: 'Jodohkan istilah komputasi berikut dengan kategorinya:',
+          pairs: [
+            { left: 'Windows 11', right: 'Sistem Operasi' },
+            { left: 'Google Chrome', right: 'Browser Web' }
+          ],
+          score: 20
+        },
+        {
+          id: 'Q5',
+          type: 'esai',
+          text: 'Jelaskan fungsi utama dari jaringan internet bagi aktivitas sekolah!',
+          score: 20
+        }
+      ],
+      examResults: []
+    };
+
+    class DBController {
+      static get() {
+        if (!localStorage.getItem(STORAGE_KEY)) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultInitialData));
+        }
+        return JSON.parse(localStorage.getItem(STORAGE_KEY));
+      }
+      static save(data) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      }
+    }
+
+    class StudentApp {
+      constructor() {
+        this.step = 'login'; // login -> verification -> exam -> result
+        this.activeStudent = null;
+        this.activeSchedule = null;
+        this.currentQuestionIdx = 0;
+        this.studentAnswers = {}; // { qId: { value, isDoubt } }
+        this.render();
+      }
+
+      get db() { return DBController.get(); }
+      saveDB(data) { DBController.save(data); }
+
+      showToast(msg, type = 'success') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `p-4 rounded-xl shadow-lg text-white text-xs font-bold transition-all duration-300 ${type === 'error' ? 'bg-rose-600' : 'bg-emerald-600'}`;
+        toast.innerText = msg;
+        container.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+      }
+
+      toggleUserDropdown() {
+        const menu = document.getElementById('user-dropdown-menu');
+        if (menu) menu.classList.toggle('hidden');
+      }
+
+      logoutStudent() {
+        if (confirm('Apakah Anda yakin ingin keluar dari sesi ujian?')) {
+          this.activeStudent = null;
+          this.activeSchedule = null;
+          this.studentAnswers = {};
+          this.step = 'login';
+          this.showToast('Berhasil keluar');
+          this.render();
+        }
+      }
+
+      render() {
+        const appView = document.getElementById('app-view');
+        const headerInfo = document.getElementById('header-student-info');
+
+        if (this.step === 'login') {
+          headerInfo.classList.add('hidden');
+          appView.className = "flex-grow flex items-center justify-center p-4 sm:p-8";
+          appView.innerHTML = this.renderLoginForm();
+        } else if (this.step === 'verification') {
+          headerInfo.classList.add('hidden');
+          appView.className = "flex-grow flex items-center justify-center p-4 sm:p-8";
+          appView.innerHTML = this.renderVerificationForm();
+        } else if (this.step === 'exam') {
+          headerInfo.classList.remove('hidden');
+          document.getElementById('txt-welcome-student').innerText = `Selamat datang, ${this.activeStudent.name}`;
+          document.getElementById('txt-subject-info').innerText = `Ujian ${this.activeSchedule.subject} (Kelas ${this.activeStudent.grade})`;
+
+          appView.className = "flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6";
+          appView.innerHTML = this.renderExamDashboard();
+        } else if (this.step === 'result') {
+          headerInfo.classList.add('hidden');
+          appView.className = "flex-grow flex items-center justify-center p-4 sm:p-8";
+          appView.innerHTML = this.renderResultView();
+        }
+
+        if (window.MathJax) MathJax.typesetPromise();
+        if (window.lucide) lucide.createIcons();
+      }
+
+      // 1. FORM LOGIN
+      renderLoginForm() {
+        return `
+          <div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-xl max-w-md w-full space-y-6">
+            <div class="text-center space-y-2">
+              <div class="inline-flex bg-emerald-100 p-3.5 rounded-2xl text-[#0f4c42]">
+                <i data-lucide="user" class="w-8 h-8"></i>
+              </div>
+              <h2 class="font-black text-slate-900 text-xl tracking-wide">LOGIN SISWA UJIAN</h2>
+              <p class="text-xs text-slate-500">Masukkan Username & Password Akun Ujian Anda</p>
+            </div>
+
+            <form onsubmit="window.studentApp.handleLogin(event)" class="space-y-4 text-xs">
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">Username Siswa</label>
+                <input type="text" id="s-username" required placeholder="syihabadaw" class="w-full p-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#0f4c42]">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">Password</label>
+                <input type="password" id="s-password" required value="123" placeholder="Password" class="w-full p-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#0f4c42]">
+              </div>
+              <button type="submit" class="w-full bg-[#0f4c42] hover:bg-[#0d3b36] text-white py-3.5 rounded-xl font-bold uppercase tracking-wider text-xs shadow-lg transition-all">
+                Masuk Ujian &rarr;
+              </button>
+            </form>
+          </div>
+        `;
+      }
+
+      handleLogin(e) {
+        e.preventDefault();
+        const u = document.getElementById('s-username').value.trim();
+        const p = document.getElementById('s-password').value.trim();
+        const db = this.db;
+
+        const student = (db.students || []).find(s => s.username === u && (s.password || '123') === p);
+
+        if (student) {
+          this.activeStudent = student;
+          this.step = 'verification';
+          this.showToast(`Login berhasil! Selamat datang, ${student.name}`);
+          this.render();
+        } else {
+          this.showToast('Username atau Password siswa salah!', 'error');
+        }
+      }
+
+      // 2. VERIFIKASI BIODATA
+      renderVerificationForm() {
+        const student = this.activeStudent;
+
+        return `
+          <div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-xl max-w-lg w-full space-y-6">
+            <div class="text-center border-b border-slate-200 pb-4">
+              <span class="bg-amber-100 text-amber-800 text-[10px] font-black uppercase px-3 py-1 rounded-full tracking-wider">KONFIRMASI BIODATA PESERTA</span>
+              <h2 class="font-black text-slate-900 text-xl mt-2">Verifikasi Data & Token</h2>
+            </div>
+
+            <div class="space-y-3 text-xs bg-slate-50 p-4 rounded-2xl border border-slate-200">
+              <div class="flex justify-between">
+                <span class="text-slate-500 font-medium">Nama Peserta:</span>
+                <span class="font-bold text-slate-900">${student.name}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-500 font-medium">Kelas / Tingkat:</span>
+                <span class="font-bold text-slate-900">Kelas ${student.grade}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-500 font-medium">ID / NISN:</span>
+                <span class="font-mono text-emerald-800 font-bold">${student.id}</span>
+              </div>
+            </div>
+
+            <form onsubmit="window.studentApp.handleStartExam(event)" class="space-y-4 text-xs">
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">Masukkan Token Ujian (Dari Pengawas/Guru)</label>
+                <input type="text" id="s-token" required placeholder="Contoh: AIP789" class="w-full p-3 border border-slate-200 rounded-xl outline-none font-mono font-bold uppercase text-center text-sm tracking-widest focus:ring-2 focus:ring-[#0f4c42]">
+              </div>
+
+              <div class="flex gap-2 pt-2">
+                <button type="button" onclick="window.studentApp.step='login'; window.studentApp.render();" class="w-1/3 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold">Batal</button>
+                <button type="submit" class="w-2/3 bg-[#0f4c42] hover:bg-[#0d3b36] text-white py-3 rounded-xl font-bold uppercase tracking-wider shadow">Mulai Ujian &rarr;</button>
+              </div>
+            </form>
+          </div>
+        `;
+      }
+
+      handleStartExam(e) {
+        e.preventDefault();
+        const tokenInput = document.getElementById('s-token').value.trim().toUpperCase();
+        const db = this.db;
+
+        const schedule = (db.schedules || []).find(sc => sc.token === tokenInput && sc.grade === this.activeStudent.grade);
+
+        if (schedule) {
+          this.activeSchedule = schedule;
+          this.step = 'exam';
+          this.currentQuestionIdx = 0;
+          this.showToast('Token Valid! Ujian dimulai.');
+          this.render();
+        } else {
+          this.showToast('Token Ujian tidak ditemukan atau tidak sesuai kelas Anda!', 'error');
+        }
+      }
+
+      // 3. DASHBOARD SOAL CBT
+      renderExamDashboard() {
+        const db = this.db;
+        const questions = db.questions || [];
+        const currentQ = questions[this.currentQuestionIdx];
+        if (!currentQ) return `<div class="p-8 text-center font-bold">Soal Belum Tersedia.</div>`;
+
+        const totalQ = questions.length;
+        const savedAns = this.studentAnswers[currentQ.id] || { value: null, isDoubt: false };
+
+        return `
+          <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            
+            <!-- PANEL KIRI: DAFTAR NOMOR SOAL -->
+            <div class="lg:col-span-1 bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+              <div class="flex justify-between items-center border-b border-slate-200 pb-3">
+                <h3 class="font-bold text-slate-900 text-xs">DAFTAR NOMOR SOAL</h3>
+                <span class="text-[10px] font-bold text-slate-500">${totalQ} Soal</span>
+              </div>
+
+              <div class="grid grid-cols-5 gap-2">
+                ${questions.map((q, idx) => {
+                  const state = this.studentAnswers[q.id];
+                  const isCurrent = idx === this.currentQuestionIdx;
+
+                  let badgeStyle = "bg-slate-100 text-slate-700 border-slate-200";
+                  if (state && state.isDoubt) {
+                    badgeStyle = "bg-amber-400 text-slate-900 font-black border-amber-500";
+                  } else if (state && state.value !== undefined && state.value !== null && state.value !== '') {
+                    badgeStyle = "bg-emerald-600 text-white font-bold border-emerald-700";
+                  }
+
+                  return `
+                    <button onclick="window.studentApp.jumpToQuestion(${idx})" class="h-10 rounded-xl text-xs font-bold border flex items-center justify-center transition-all ${badgeStyle}${isCurrent ? 'ring-2 ring-offset-1 ring-[#0f4c42]' : ''}">
+                      ${idx + 1}
+                    </button>
+                  `;
+                }).join('')}
+              </div>
+
+              <div class="pt-4 border-t border-slate-100 text-[10px] space-y-1.5 text-slate-600">
+                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-emerald-600 inline-block"></span> Terjawab</div>
+                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-amber-400 inline-block"></span> Ragu-Ragu</div>
+                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-slate-100 border inline-block"></span> Belum Dijawab</div>
+              </div>
+            </div>
+
+            <!-- PANEL KANAN: SOAL & JAWABAN -->
+            <div class="lg:col-span-3 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-between space-y-6">
+              
+              <div class="space-y-4">
+                <div class="flex justify-between items-center border-b border-slate-200 pb-3">
+                  <span class="bg-[#0f4c42] text-white text-xs font-bold px-3 py-1 rounded-xl">Soal No. ${this.currentQuestionIdx + 1} / ${totalQ}</span>
+                  <span class="text-xs font-bold text-slate-500 uppercase">${currentQ.type.replace('_', ' ')}</span>
+                </div>
+
+                <div class="text-sm font-semibold text-slate-800 leading-relaxed">
+                  ${currentQ.text}
+                </div>
+
+                ${currentQ.imageUrl ? `<img src="${currentQ.imageUrl}" class="max-h-56 rounded-xl border object-contain my-3">` : ''}
+
+                <div class="pt-2">
+                  ${this.renderQuestionOptions(currentQ, savedAns.value)}
+                </div>
+              </div>
+
+              <!-- BOTTOM NAVIGATION BAR -->
+              <div class="flex justify-between items-center pt-6 border-t border-slate-200 flex-wrap gap-2 text-xs font-bold">
+                <button onclick="window.studentApp.prevQuestion()" ${this.currentQuestionIdx === 0 ? 'disabled class="opacity-40 bg-slate-200 text-slate-500 px-4 py-2.5 rounded-xl"' : 'class="bg-slate-200 hover:bg-slate-300 text-slate-800 px-4 py-2.5 rounded-xl"'}>
+                  &larr; Sebelumnya
+                </button>
+
+                <button onclick="window.studentApp.toggleDoubt('${currentQ.id}')" class="${savedAns.isDoubt ? 'bg-amber-500 text-white' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'} px-4 py-2.5 rounded-xl border border-amber-300">
+                  ${savedAns.isDoubt ? '✓ Ragu-Ragu (Aktif)' : 'Ragu-Ragu'}
+                </button>
+
+                ${this.currentQuestionIdx === totalQ - 1 ? `
+                  <button onclick="window.studentApp.finishExam()" class="bg-rose-600 hover:bg-rose-700 text-white px-6 py-2.5 rounded-xl shadow">
+                    SELESAI UJIAN
+                  </button>
+                ` : `
+                  <button onclick="window.studentApp.nextQuestion()" class="bg-[#0f4c42] hover:bg-[#0d3b36] text-white px-5 py-2.5 rounded-xl shadow">
+                    Simpan & Lanjutkan &rarr;
+                  </button>
+                `}
+              </div>
+
+            </div>
+
+          </div>
+        `;
+      }
+
+      renderQuestionOptions(q, currentValue) {
+        if (q.type === 'pg_tunggal' || q.type === 'benar_salah') {
+          return `
+            <div class="space-y-2">
+              ${(q.options || []).map(opt => `
+                <label class="flex items-center gap-3 p-3.5 border border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-50 transition-colors ${currentValue === opt ? 'bg-emerald-50 border-emerald-400 font-bold text-emerald-900' : ''}">
+                  <input type="radio" name="answer_opt" value="${opt}" ${currentValue === opt ? 'checked' : ''} onchange="window.studentApp.saveCurrentAnswer('${q.id}', this.value)" class="w-4 h-4 accent-[#0f4c42]">
+                  <span class="text-xs text-slate-800">${opt}</span>
+                </label>
+              `).join('')}
+            </div>
+          `;
+        } else if (q.type === 'pg_kompleks') {
+          const arrVal = Array.isArray(currentValue) ? currentValue : [];
+          return `
+            <div class="space-y-2">
+              ${(q.options || []).map(opt => `
+                <label class="flex items-center gap-3 p-3.5 border border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-50 transition-colors ${arrVal.includes(opt) ? 'bg-emerald-50 border-emerald-400 font-bold text-emerald-900' : ''}">
+                  <input type="checkbox" name="answer_cb" value="${opt}" ${arrVal.includes(opt) ? 'checked' : ''} onchange="window.studentApp.saveComplexAnswer('${q.id}')" class="w-4 h-4 accent-[#0f4c42]">
+                  <span class="text-xs text-slate-800">${opt}</span>
+                </label>
+              `).join('')}
+            </div>
+          `;
+        } else if (q.type === 'menjodohkan') {
+          const mapVal = typeof currentValue === 'object' && currentValue !== null ? currentValue : {};
+          return `
+            <div class="space-y-3">
+              ${(q.pairs || []).map((p, pIdx) => `
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-2 items-center text-xs">
+                  <span class="font-bold text-slate-800">${p.left}</span>
+                  <input type="text" placeholder="Pasangan cocok..." value="${mapVal[p.left] || ''}" oninput="window.studentApp.saveMatchingAnswer('${q.id}', '${p.left}', this.value)" class="p-2 border border-slate-200 rounded-lg outline-none font-bold">
+                </div>
+              `).join('')}
+            </div>
+          `;
+        } else if (q.type === 'esai') {
+          return `
+            <textarea rows="4" placeholder="Tuliskan jawaban uraian esai Anda di sini secara lengkap..." oninput="window.studentApp.saveCurrentAnswer('${q.id}', this.value)" class="w-full p-3 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-[#0f4c42]">${currentValue || ''}</textarea>
+          `;
+        }
+      }
+
+      saveCurrentAnswer(qId, val) {
+        if (!this.studentAnswers[qId]) this.studentAnswers[qId] = { isDoubt: false };
+        this.studentAnswers[qId].value = val;
+        this.render();
+      }
+
+      saveComplexAnswer(qId) {
+        const cbs = document.querySelectorAll('input[name="answer_cb"]:checked');
+        const selected = Array.from(cbs).map(cb => cb.value);
+        if (!this.studentAnswers[qId]) this.studentAnswers[qId] = { isDoubt: false };
+        this.studentAnswers[qId].value = selected;
+        this.render();
+      }
+
+      saveMatchingAnswer(qId, leftKey, rightVal) {
+        if (!this.studentAnswers[qId]) this.studentAnswers[qId] = { isDoubt: false, value: {} };
+        if (typeof this.studentAnswers[qId].value !== 'object') this.studentAnswers[qId].value = {};
+        this.studentAnswers[qId].value[leftKey] = rightVal;
+      }
+
+      toggleDoubt(qId) {
+        if (!this.studentAnswers[qId]) this.studentAnswers[qId] = { value: null, isDoubt: false };
+        this.studentAnswers[qId].isDoubt = !this.studentAnswers[qId].isDoubt;
+        this.render();
+      }
+
+      jumpToQuestion(idx) {
+        this.currentQuestionIdx = idx;
+        this.render();
+      }
+
+      nextQuestion() {
+        const total = (this.db.questions || []).length;
+        if (this.currentQuestionIdx < total - 1) {
+          this.currentQuestionIdx++;
+          this.render();
+        }
+      }
+
+      prevQuestion() {
+        if (this.currentQuestionIdx > 0) {
+          this.currentQuestionIdx--;
+          this.render();
+        }
+      }
+
+      finishExam() {
+        if (confirm('Apakah Anda yakin ingin menyelesaikan ujian ini?')) {
+          const db = this.db;
+          const questions = db.questions || [];
+          
+          let pgTotalScore = 0;
+          const essayAnswers = {};
+
+          questions.forEach(q => {
+            const ansObj = this.studentAnswers[q.id];
+            const userVal = ansObj ? ansObj.value : null;
+
+            if (q.type === 'pg_tunggal' || q.type === 'benar_salah') {
+              if (userVal === q.answer) pgTotalScore += (parseFloat(q.score) || 0);
+            } else if (q.type === 'pg_kompleks') {
+              const k = Array.isArray(q.answer) ? q.answer.sort().join(',') : '';
+              const u = Array.isArray(userVal) ? userVal.sort().join(',') : '';
+              if (k && k === u) pgTotalScore += (parseFloat(q.score) || 0);
+            } else if (q.type === 'menjodohkan') {
+              pgTotalScore += (parseFloat(q.score) || 0);
+            } else if (q.type === 'esai') {
+              essayAnswers[q.id] = userVal || '';
+            }
+          });
+
+          const resultObj = {
+            studentId: this.activeStudent.id,
+            studentName: this.activeStudent.name,
+            grade: this.activeStudent.grade,
+            subject: this.activeSchedule.subject,
+            pgScore: pgTotalScore,
+            essayAnswers,
+            essayScore: 0,
+            totalScore: pgTotalScore,
+            isReleased: false
+          };
+
+          db.examResults.push(resultObj);
+          this.saveDB(db);
+
+          this.step = 'result';
+          this.showToast('Ujian Berhasil Diselesaikan!');
+          this.render();
+        }
+      }
+
+      renderResultView() {
+        return `
+          <div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-xl max-w-md w-full text-center space-y-6">
+            <div class="inline-flex bg-emerald-100 p-4 rounded-full text-emerald-800">
+              <i data-lucide="check-circle-2" class="w-12 h-12"></i>
+            </div>
+
+            <div class="space-y-2">
+              <h2 class="font-black text-slate-900 text-xl">Ujian Telah Selesai</h2>
+              <p class="text-xs text-slate-500">Jawaban Anda telah berhasil tersimpan secara aman di sistem.</p>
+            </div>
+
+            <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-2">
+              <p class="text-slate-500">Nilai akhir akan dipublikasikan oleh Bapak/Ibu guru pengampu setelah koreksi esai selesai.</p>
+            </div>
+
+            <button onclick="window.location.reload()" class="w-full bg-[#0f4c42] hover:bg-[#0d3b36] text-white py-3 rounded-xl font-bold uppercase tracking-wider text-xs shadow">
+              Kembali Ke Beranda
+            </button>
+          </div>
+        `;
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      window.studentApp = new StudentApp();
+    });
+  </script>
+</body>
+</html>
