@@ -726,7 +726,7 @@
                       <td class="p-3 font-bold text-slate-900">${sc.subject}</td>
                       <td class="p-3">Kelas ${sc.grade}</td>
                       <td class="p-3 font-medium">${sc.date || '-'}</td>
-                      <td class="p-3 font-mono">${sc.startTime \vert{}\vert{} '00:00'} -${sc.endTime || '23:59'}</td>
+                      <td class="p-3 font-mono">${sc.startTime || '00:00'} -${sc.endTime || '23:59'}</td>
                       <td class="p-3"><code class="bg-emerald-50 text-emerald-800 font-mono font-bold px-2 py-1 rounded border border-emerald-200">${sc.token}</code></td>
                       <td class="p-3 text-right">
                         <button onclick="window.adminApp.deleteJadwal('${sc.id}')" class="text-rose-600 hover:text-rose-800 font-bold">Hapus</button>
