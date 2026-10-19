@@ -472,4 +472,207 @@
                       <td class="p-3 font-mono text-emerald-700">${s.username}</td>
                       <td class="p-3"><span class="bg-slate-100 px-2 py-0.5 rounded text-slate-700 font-bold">${s.grade}</span></td>
                       <td class="p-3 text-right">
-                        <button onclick="window.adminApp.
+                        <button onclick="window.adminApp.deleteSiswa('${s.id}')" class="text-rose-600 hover:text-rose-800 font-bold">Hapus</button>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }
+
+      renderTabJadwalContent() {
+        const db = this.db;
+        return `
+          <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+            <div class="flex justify-between items-center">
+              <h3 class="font-bold text-slate-900 text-sm">Jadwal & Token Ujian Aktif</h3>
+              <button onclick="window.adminApp.openAddJadwalModal()" class="bg-[#0f4c42] hover:bg-[#0d3b36] text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1">
+                <i data-lucide="plus" class="w-4 h-4"></i> Buat Jadwal Ujian
+              </button>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs text-slate-700">
+                <thead class="bg-slate-100 font-bold text-slate-800 uppercase">
+                  <tr>
+                    <th class="p-3 rounded-l-xl">Mata Pelajaran</th>
+                    <th class="p-3">Kelas</th>
+                    <th class="p-3">Token Ujian</th>
+                    <th class="p-3 rounded-r-xl text-right">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  ${db.schedules.map(sc => `
+                    <tr>
+                      <td class="p-3 font-bold text-slate-900">${sc.subject}</td>
+                      <td class="p-3">Kelas ${sc.grade}</td>
+                      <td class="p-3"><code class="bg-emerald-50 text-emerald-800 font-mono font-bold px-2 py-1 rounded border border-emerald-200">${sc.token}</code></td>
+                      <td class="p-3 text-right">
+                        <button onclick="window.adminApp.deleteJadwal('${sc.id}')" class="text-rose-600 hover:text-rose-800 font-bold">Hapus</button>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }
+
+      openAddGuruModal() {
+        this.showModal(`
+          <div class="space-y-4">
+            <h3 class="font-bold text-slate-900 text-sm">Tambah Data Guru Baru</h3>
+            <form onsubmit="window.adminApp.saveGuru(event)" class="space-y-3">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Nama Guru Lengkap</label>
+                <input type="text" id="g-name" required placeholder="Dr. Budi Santoso, M.Pd" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#0f4c42] outline-none">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Username Login</label>
+                <input type="text" id="g-user" required placeholder="guru_ipa" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#0f4c42] outline-none">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Mata Pelajaran (Pisahkan Komma)</label>
+                <input type="text" id="g-subj" required placeholder="IPA, Fisika" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#0f4c42] outline-none">
+              </div>
+              <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="window.adminApp.closeModal()" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 bg-slate-100">Batal</button>
+                <button type="submit" class="px-5 py-2 rounded-xl text-xs font-bold text-white bg-[#0f4c42]">Simpan Data</button>
+              </div>
+            </form>
+          </div>
+        `);
+      }
+
+      saveGuru(e) {
+        e.preventDefault();
+        const db = this.db;
+        db.teachers.push({
+          id: 'T' + Date.now(),
+          name: document.getElementById('g-name').value.trim(),
+          username: document.getElementById('g-user').value.trim(),
+          subjects: document.getElementById('g-subj').value.split(',').map(s => s.trim())
+        });
+        this.saveDB(db);
+        this.closeModal();
+        this.showToast('Guru berhasil ditambahkan!');
+        this.render();
+      }
+
+      deleteGuru(id) {
+        const db = this.db;
+        db.teachers = db.teachers.filter(t => t.id !== id);
+        this.saveDB(db);
+        this.showToast('Data guru dihapus!');
+        this.render();
+      }
+
+      openAddSiswaModal() {
+        this.showModal(`
+          <div class="space-y-4">
+            <h3 class="font-bold text-slate-900 text-sm">Tambah Data Siswa Baru</h3>
+            <form onsubmit="window.adminApp.saveSiswa(event)" class="space-y-3">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Nama Siswa</label>
+                <input type="text" id="s-name" required placeholder="Ahmad Rizky" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#0f4c42] outline-none">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Username Login</label>
+                <input type="text" id="s-user" required placeholder="siswa01" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#0f4c42] outline-none">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Kelas</label>
+                <input type="text" id="s-grade" required placeholder="7" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#0f4c42] outline-none">
+              </div>
+              <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="window.adminApp.closeModal()" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 bg-slate-100">Batal</button>
+                <button type="submit" class="px-5 py-2 rounded-xl text-xs font-bold text-white bg-[#0f4c42]">Simpan Siswa</button>
+              </div>
+            </form>
+          </div>
+        `);
+      }
+
+      saveSiswa(e) {
+        e.preventDefault();
+        const db = this.db;
+        db.students.push({
+          id: 'S' + Date.now(),
+          name: document.getElementById('s-name').value.trim(),
+          username: document.getElementById('s-user').value.trim(),
+          grade: document.getElementById('s-grade').value.trim()
+        });
+        this.saveDB(db);
+        this.closeModal();
+        this.showToast('Siswa berhasil ditambahkan!');
+        this.render();
+      }
+
+      deleteSiswa(id) {
+        const db = this.db;
+        db.students = db.students.filter(s => s.id !== id);
+        this.saveDB(db);
+        this.showToast('Data siswa dihapus!');
+        this.render();
+      }
+
+      openAddJadwalModal() {
+        this.showModal(`
+          <div class="space-y-4">
+            <h3 class="font-bold text-slate-900 text-sm">Buat Jadwal Ujian & Token Baru</h3>
+            <form onsubmit="window.adminApp.saveJadwal(event)" class="space-y-3">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Mata Pelajaran</label>
+                <input type="text" id="j-subj" required placeholder="Bahasa Indonesia" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#0f4c42] outline-none">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Kelas Target</label>
+                <input type="text" id="j-grade" required placeholder="7" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#0f4c42] outline-none">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Token Ujian</label>
+                <input type="text" id="j-token" required placeholder="AIP789" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs font-mono font-bold uppercase focus:ring-2 focus:ring-[#0f4c42] outline-none">
+              </div>
+              <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="window.adminApp.closeModal()" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 bg-slate-100">Batal</button>
+                <button type="submit" class="px-5 py-2 rounded-xl text-xs font-bold text-white bg-[#0f4c42]">Simpan Jadwal</button>
+              </div>
+            </form>
+          </div>
+        `);
+      }
+
+      saveJadwal(e) {
+        e.preventDefault();
+        const db = this.db;
+        db.schedules.push({
+          id: 'SCH' + Date.now(),
+          subject: document.getElementById('j-subj').value.trim(),
+          grade: document.getElementById('j-grade').value.trim(),
+          token: document.getElementById('j-token').value.trim().toUpperCase()
+        });
+        this.saveDB(db);
+        this.closeModal();
+        this.showToast('Jadwal ujian berhasil ditambahkan!');
+        this.render();
+      }
+
+      deleteJadwal(id) {
+        const db = this.db;
+        db.schedules = db.schedules.filter(sc => sc.id !== id);
+        this.saveDB(db);
+        this.showToast('Jadwal dihapus!');
+        this.render();
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      window.adminApp = new AdminApp();
+    });
+  </script>
+</body>
+</html>
