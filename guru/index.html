@@ -297,18 +297,25 @@
         }
       }
 
-      // LANGKAH 1: PENGATURAN JENIS & JUMLAH SOAL
+      // LANGKAH 1: PENGATURAN MULTI JENIS & JUMLAH SOAL
       renderConfigBankSoalForm() {
         const subjects = this.activeGuru.subjects || ['Informatika', 'BK'];
+
+        const questionTypes = [
+          { id: 'pg_tunggal', label: 'Pilihan Ganda Tunggal' },
+          { id: 'pg_kompleks', label: 'Pilihan Ganda Kompleks (Banyak Jawaban)' },
+          { id: 'benar_salah', label: 'Benar / Salah' },
+          { id: 'esai', label: 'Esai / Uraian' }
+        ];
 
         return `
           <div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm max-w-xl mx-auto space-y-6">
             <div class="text-center space-y-1 border-b border-slate-100 pb-4">
               <h3 class="font-bold text-slate-900 text-lg">Pengaturan Bank Soal Baru</h3>
-              <p class="text-xs text-slate-500">Atur Mata Pelajaran, Jenis Soal, dan Jumlah Soal yang Ingin Dibuat</p>
+              <p class="text-xs text-slate-500">Pilih Mata Pelajaran, Kombinasi Jenis Soal, dan Jumlah Soalnya</p>
             </div>
 
-            <form onsubmit="window.guruApp.handleGenerateSlots(event)" class="space-y-4 text-xs">
+            <form onsubmit="window.guruApp.handleGenerateSlots(event)" class="space-y-5 text-xs">
               <div>
                 <label class="block font-bold text-slate-700 mb-1">Pilih Mata Pelajaran</label>
                 <select id="cfg-subj" required class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0f4c42] outline-none font-bold">
@@ -317,49 +324,82 @@
               </div>
 
               <div>
-                <label class="block font-bold text-slate-700 mb-1">Pilih Jenis Soal</label>
-                <select id="cfg-type" required class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0f4c42] outline-none font-bold">
-                  <option value="pg_tunggal">Pilihan Ganda Tunggal</option>
-                  <option value="pg_kompleks">Pilihan Ganda Kompleks (Banyak Jawaban)</option>
-                  <option value="benar_salah">Benar / Salah</option>
-                  <option value="esai">Esai / Uraian</option>
-                </select>
-              </div>
-
-              <div>
-                <label class="block font-bold text-slate-700 mb-1">Jumlah Soal yang Ingin Dibuat</label>
-                <input type="number" id="cfg-count" min="1" max="100" value="5" required placeholder="Contoh: 5, 10, 20" class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0f4c42] outline-none font-bold">
+                <label class="block font-bold text-slate-700 mb-2">Pilih Jenis Soal & Jumlahnya</label>
+                <div class="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                  ${questionTypes.map(t => `
+                    <div class="flex items-center justify-between gap-3 bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
+                      <label class="flex items-center gap-2 cursor-pointer font-bold text-slate-700 text-xs">
+                        <input type="checkbox" name="type_check" value="${t.id}" onchange="window.guruApp.toggleTypeInput('${t.id}', this.checked)" class="w-4 h-4 text-[#0f4c42] rounded focus:ring-[#0f4c42]">
+                        <span>${t.label}</span>
+                      </label>
+                      <div class="flex items-center gap-1">
+                        <span class="text-[10px] font-bold text-slate-400">Jumlah:</span>
+                        <input type="number" id="count_${t.id}" min="1" max="100" value="5" disabled class="w-16 p-1.5 border border-slate-200 rounded-lg text-center font-bold bg-slate-100 text-slate-400 outline-none">
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
               </div>
 
               <button type="submit" class="w-full bg-[#0f4c42] hover:bg-[#0d3b36] text-white py-3.5 rounded-xl font-bold uppercase tracking-wider shadow-md transition-all">
-                Buat Template Soal &rarr;
+                Buat Template Soal Kombinasi &rarr;
               </button>
             </form>
           </div>
         `;
       }
 
+      toggleTypeInput(typeId, checked) {
+        const input = document.getElementById(`count_${typeId}`);
+        if (input) {
+          input.disabled = !checked;
+          if (checked) {
+            input.classList.remove('bg-slate-100', 'text-slate-400');
+            input.classList.add('bg-white', 'text-slate-800', 'border-[#0f4c42]');
+          } else {
+            input.classList.add('bg-slate-100', 'text-slate-400');
+            input.classList.remove('bg-white', 'text-slate-800', 'border-[#0f4c42]');
+          }
+        }
+      }
+
       handleGenerateSlots(e) {
         e.preventDefault();
         const subj = document.getElementById('cfg-subj').value;
-        const type = document.getElementById('cfg-type').value;
-        const count = parseInt(document.getElementById('cfg-count').value) || 5;
+        const checkedTypes = Array.from(document.querySelectorAll('input[name="type_check"]:checked')).map(cb => cb.value);
 
-        this.bankConfig = { subject: subj, type: type, count: count };
-        
-        this.generatedSlots = [];
-        for (let i = 0; i < count; i++) {
-          this.generatedSlots.push({
-            id: 'Q_' + Date.now() + '_' + i,
-            text: '',
-            imageUrl: '',
-            options: type === 'esai' ? [] : ['A', 'B', 'C', 'D'],
-            answer: '',
-            score: Math.round(100 / count)
-          });
+        if (checkedTypes.length === 0) {
+          this.showToast('Pilih minimal 1 jenis soal!', 'error');
+          return;
         }
 
-        this.showToast(`Template ${count} soal berhasil dibuat!`);
+        let typeConfigs = [];
+        let totalCount = 0;
+        this.generatedSlots = [];
+
+        checkedTypes.forEach(type => {
+          const count = parseInt(document.getElementById(`count_${type}`).value) || 0;
+          if (count > 0) {
+            typeConfigs.push({ type, count });
+            totalCount += count;
+
+            for (let i = 0; i < count; i++) {
+              this.generatedSlots.push({
+                id: 'Q_' + Date.now() + '_' + type + '_' + i,
+                type: type,
+                text: '',
+                imageUrl: '',
+                options: type === 'esai' ? [] : (type === 'benar_salah' ? ['Benar', 'Salah'] : ['A', 'B', 'C', 'D']),
+                answer: '',
+                score: Math.round(100 / (totalCount || 1))
+              });
+            }
+          }
+        });
+
+        this.bankConfig = { subject: subj, types: typeConfigs, totalCount: totalCount };
+
+        this.showToast(`Template ${totalCount} soal kombinasi berhasil dibuat!`);
         this.render();
       }
 
@@ -373,7 +413,9 @@
             <div class="flex justify-between items-center flex-wrap gap-3 border-b border-slate-200 pb-4">
               <div>
                 <span class="bg-emerald-100 text-emerald-900 text-[10px] font-black uppercase px-2.5 py-1 rounded-full">${cfg.subject}</span>
-                <h3 class="font-bold text-slate-900 text-base mt-1">Template Soal (${cfg.count} Soal - ${cfg.type.replace('_', ' ').toUpperCase()})</h3>
+                <h3 class="font-bold text-slate-900 text-base mt-1">
+                  Template Soal Kombinasi (${cfg.totalCount} Soal Total)
+                </h3>
               </div>
 
               <!-- DUA OPSI: DOKUMEN WORD (.DOCX) ATAU MANUAL -->
@@ -396,7 +438,10 @@
                 ${this.generatedSlots.map((s, idx) => `
                   <div class="p-5 bg-slate-50 rounded-2xl border border-slate-200 space-y-3 text-xs">
                     <div class="flex justify-between items-center font-bold text-slate-800 border-b border-slate-200 pb-2">
-                      <span class="text-[#0f4c42]">Soal No. ${idx + 1}</span>
+                      <div class="flex items-center gap-2">
+                        <span class="text-[#0f4c42]">Soal No. ${idx + 1}</span>
+                        <span class="bg-slate-200 text-slate-700 text-[10px] px-2 py-0.5 rounded font-extrabold uppercase">${s.type.replace('_', ' ')}</span>
+                      </div>
                       <div class="flex items-center gap-2">
                         <span>Bobot Nilai:</span>
                         <input type="number" value="${s.score}" onchange="window.guruApp.updateSlotScore(${idx}, this.value)" class="w-16 p-1 border rounded text-center font-bold">
@@ -410,10 +455,10 @@
 
                     <div>
                       <label class="block font-bold text-slate-700 mb-1">URL Gambar (Opsional)</label>
-                      <input type="text" placeholder="https://..." value="${s.imageUrl || ''}" oninput="window.guruApp.updateSlotImage(${idx}, this.value)" class="w-full p-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0f4c42] outline-none">
+                      <input type="text" placeholder="https://..." value="${s.imageUrl \vert{}\vert{} ''}" oninput="window.guruApp.updateSlotImage(${idx}, this.value)" class="w-full p-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0f4c42] outline-none">
                     </div>
 
-                    ${cfg.type !== 'esai' ? `
+                    ${s.type !== 'esai' ? `
                       <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
                         <div>
                           <label class="block font-bold text-slate-700 mb-1">Pilihan Jawaban (Pisahkan Komma)</label>
@@ -460,18 +505,14 @@
       downloadDocxGuide() {
         const textContent = `PANDUAN FORMAT SOAL WORD (.DOCX) - E-CBT AIP CLOUD\n\n` +
           `Ketikkan soal di Microsoft Word dengan format struktur sederhana berikut:\n\n` +
-          `1. Pertanyaan soal nomor pertama\n` +
+          `1. Pertanyaan soal nomor pertama (Pilihan Ganda)\n` +
           `A. Pilihan jawaban A\n` +
           `B. Pilihan jawaban B\n` +
           `C. Pilihan jawaban C\n` +
           `D. Pilihan jawaban D\n` +
           `KUNCI: A\n\n` +
-          `2. Pertanyaan soal nomor kedua\n` +
-          `A. Pilihan jawaban A\n` +
-          `B. Pilihan jawaban B\n` +
-          `C. Pilihan jawaban C\n` +
-          `D. Pilihan jawaban D\n` +
-          `KUNCI: B\n`;
+          `2. Pertanyaan soal nomor kedua (Esai/Uraian)\n` +
+          `KUNCI: Kunci jawaban uraian singkat\n`;
 
         const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8;' });
         const link = document.createElement("a");
@@ -501,11 +542,11 @@
               let currentSlot = null;
 
               lines.forEach(line => {
-                // Deteksi nomor soal (contoh: "1. Soal...", "2. Soal...")
                 if (/^\d+[\.\)]/.test(line)) {
                   if (currentSlot) parsedSlots.push(currentSlot);
                   currentSlot = {
                     id: 'Q_' + Date.now() + '_' + parsedSlots.length,
+                    type: 'pg_tunggal',
                     text: line.replace(/^\d+[\.\)]\s*/, ''),
                     imageUrl: '',
                     options: [],
@@ -525,7 +566,11 @@
 
               if (parsedSlots.length > 0) {
                 this.generatedSlots = parsedSlots;
-                this.bankConfig.count = parsedSlots.length;
+                this.bankConfig = {
+                  subject: this.bankConfig ? this.bankConfig.subject : 'Informatika',
+                  types: [{ type: 'pg_tunggal', count: parsedSlots.length }],
+                  totalCount: parsedSlots.length
+                };
                 this.showToast(`Berhasil membaca ${parsedSlots.length} soal dari file Word (.docx)!`);
                 this.render();
               } else {
@@ -550,7 +595,7 @@
           db.questions.push({
             id: s.id,
             subject: this.bankConfig.subject,
-            type: this.bankConfig.type,
+            type: s.type || 'pg_tunggal',
             text: s.text,
             imageUrl: s.imageUrl,
             options: s.options,
