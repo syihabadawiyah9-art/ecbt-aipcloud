@@ -46,15 +46,21 @@
           </div>
         </a>
 
-        <!-- Navigation Menu Admin -->
-        <nav id="nav-menu" class="flex items-center gap-6 text-sm font-bold tracking-wider">
-          <a href="../index.html" class="hover:text-amber-300 transition-colors">BERANDA</a>
+        <!-- Navigation Menu Header -->
+        <nav id="nav-menu" class="flex items-center gap-4 text-sm font-bold tracking-wider">
+          <a href="../index.html" id="btn-nav-beranda" class="hover:text-amber-300 transition-colors">BERANDA</a>
           <button id="btn-nav-login" onclick="window.adminApp.openLoginModal()" class="text-amber-300 border-b-2 border-amber-300 pb-1">LOGIN</button>
           
           <div id="admin-logged-badge" class="hidden flex items-center gap-3">
-            <span class="bg-emerald-800 text-amber-300 text-xs font-bold px-3 py-1.5 rounded-lg border border-emerald-600">Super Admin</span>
-            <button onclick="window.adminApp.logout()" class="text-xs font-bold text-rose-300 hover:text-white bg-rose-900/40 hover:bg-rose-900 px-3 py-1.5 rounded-lg transition-all border border-rose-700">
-              Keluar
+            <!-- Tombol Admin (Klik untuk Ubah Akun Admin) -->
+            <button onclick="window.adminApp.openAdminProfileModal()" class="text-xs font-bold text-amber-300 hover:text-white transition-colors tracking-widest uppercase py-1 px-2 rounded hover:bg-emerald-800">
+              ADMIN
+            </button>
+
+            <!-- Tombol KELUAR (Desain Merah sesuai gambar Canva) -->
+            <button onclick="window.adminApp.logout()" class="flex items-center gap-1 text-xs font-bold text-rose-300 hover:text-white bg-rose-900/60 hover:bg-rose-900 px-3 py-1.5 rounded-lg transition-all border border-rose-700">
+              <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+              KELUAR
             </button>
           </div>
         </nav>
@@ -65,7 +71,7 @@
 
   <!-- MAIN DYNAMIC CONTENT -->
   <main id="app-view" class="flex-grow flex items-center justify-center p-6 sm:p-12">
-    <!-- Diisi via JS (Tampilan Hero Banner / Dashboard Admin) -->
+    <!-- Diisi via JS -->
   </main>
 
   <!-- FOOTER -->
@@ -82,7 +88,9 @@
     const STORAGE_KEY = 'e_cbt_aip_cloud_db';
 
     const initialData = {
+      adminUser: 'adminutama',
       adminPassword: 'superadmin123',
+      adminName: 'Administrator Utama',
       teachers: [
         { id: 'T01', username: 'guru_ipa', name: 'Dr. Budi Santoso, M.Pd', subjects: ['IPA', 'Fisika'] },
         { id: 'T02', username: 'guru_indo', name: 'Siti Rahma, S.Pd', subjects: ['Bahasa Indonesia'] }
@@ -92,7 +100,8 @@
         { id: 'S02', username: 'siswa02', name: 'Dewi Lestari', grade: '8' }
       ],
       schedules: [
-        { id: 'SCH01', subject: 'Bahasa Indonesia', grade: '7', token: 'AIP789' }
+        { id: 'SCH01', subject: 'Bahasa Indonesia', grade: '7', token: 'AIP789' },
+        { id: 'SCH02', subject: 'IPA', grade: '8', token: 'AIP456' }
       ],
       adminSession: false
     };
@@ -112,7 +121,7 @@
 
     class AdminApp {
       constructor() {
-        this.adminTab = 'summary';
+        this.activeTab = 'dashboard';
         this.render();
       }
 
@@ -120,8 +129,8 @@
         return DBController.get();
       }
 
-      saveDB(db) {
-        DBController.save(db);
+      saveDB(data) {
+        DBController.save(data);
       }
 
       showToast(msg, type = 'success') {
@@ -175,7 +184,7 @@
             </form>
 
             <div class="bg-emerald-50 p-3 rounded-xl text-[11px] text-emerald-800 font-medium text-center">
-              Kredensial Demo: <b>adminutama</b> / Password: <b>superadmin123</b>
+              Default Login: <b>adminutama</b> / Password: <b>superadmin123</b>
             </div>
           </div>
         `);
@@ -188,7 +197,10 @@
         const p = document.getElementById('a-pass').value.trim();
         const db = this.db;
 
-        if (u === 'adminutama' && p === (db.adminPassword || 'superadmin123')) {
+        const validUser = db.adminUser || 'adminutama';
+        const validPass = db.adminPassword || 'superadmin123';
+
+        if (u === validUser && p === validPass) {
           db.adminSession = true;
           this.saveDB(db);
           this.closeModal();
@@ -199,6 +211,55 @@
         }
       }
 
+      // MODAL UBAH PROFIL ADMIN
+      openAdminProfileModal() {
+        const db = this.db;
+        this.showModal(`
+          <div class="space-y-4">
+            <div class="text-center">
+              <div class="inline-flex bg-amber-100 p-3 rounded-2xl text-amber-700 mb-2">
+                <i data-lucide="user-cog" class="w-6 h-6"></i>
+              </div>
+              <h3 class="font-bold text-slate-900 text-lg">Kelola Akun Admin</h3>
+              <p class="text-xs text-slate-500">Ubah Username & Password Admin Utama</p>
+            </div>
+
+            <form onsubmit="window.adminApp.saveAdminProfile(event)" class="space-y-3">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Nama Admin</label>
+                <input type="text" id="prof-name" value="${db.adminName || 'Administrator Utama'}" required class="w-full p-2.5 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#0f4c42] outline-none">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Username Baru</label>
+                <input type="text" id="prof-user" value="${db.adminUser || 'adminutama'}" required class="w-full p-2.5 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#0f4c42] outline-none">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Password Baru</label>
+                <input type="text" id="prof-pass" value="${db.adminPassword || 'superadmin123'}" required class="w-full p-2.5 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#0f4c42] outline-none">
+              </div>
+              <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="window.adminApp.closeModal()" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 bg-slate-100">Batal</button>
+                <button type="submit" class="px-5 py-2 rounded-xl text-xs font-bold text-white bg-[#0f4c42] hover:bg-[#0d3b36]">Simpan Perubahan</button>
+              </div>
+            </form>
+          </div>
+        `);
+        if (window.lucide) lucide.createIcons();
+      }
+
+      saveAdminProfile(e) {
+        e.preventDefault();
+        const db = this.db;
+        db.adminName = document.getElementById('prof-name').value.trim();
+        db.adminUser = document.getElementById('prof-user').value.trim();
+        db.adminPassword = document.getElementById('prof-pass').value.trim();
+
+        this.saveDB(db);
+        this.closeModal();
+        this.showToast('Akun Admin Berhasil Diperbarui!');
+        this.render();
+      }
+
       logout() {
         const db = this.db;
         db.adminSession = false;
@@ -207,19 +268,27 @@
         this.render();
       }
 
+      setTab(tab) {
+        this.activeTab = tab;
+        this.render();
+      }
+
       render() {
         const appView = document.getElementById('app-view');
         const db = this.db;
         const btnNavLogin = document.getElementById('btn-nav-login');
+        const btnNavBeranda = document.getElementById('btn-nav-beranda');
         const adminBadge = document.getElementById('admin-logged-badge');
 
         if (db.adminSession) {
           btnNavLogin.classList.add('hidden');
+          btnNavBeranda.classList.add('hidden');
           adminBadge.classList.remove('hidden');
-          appView.className = "flex-grow max-w-6xl w-full mx-auto p-6 sm:p-8";
+          appView.className = "flex-grow max-w-5xl w-full mx-auto p-4 sm:p-8 space-y-6";
           appView.innerHTML = this.renderAdminDashboard();
         } else {
           btnNavLogin.classList.remove('hidden');
+          btnNavBeranda.classList.remove('hidden');
           adminBadge.classList.add('hidden');
           appView.className = "flex-grow flex items-center justify-center p-6 sm:p-12";
           appView.innerHTML = this.renderAdminHero();
@@ -228,7 +297,6 @@
         if (window.lucide) lucide.createIcons();
       }
 
-      // TAMPILAN SESUAI GAMBAR CANVA
       renderAdminHero() {
         return `
           <div class="text-center max-w-4xl mx-auto space-y-6">
@@ -259,53 +327,149 @@
 
       renderAdminDashboard() {
         const db = this.db;
+        const tab = this.activeTab;
+
         return `
-          <div class="space-y-6 w-full">
-            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex justify-between items-center flex-wrap gap-4">
+          <!-- CAPSULE NAV TABS (Persis Gambar Canva) -->
+          <div class="bg-white/80 p-2 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-center gap-2 flex-wrap max-w-2xl mx-auto">
+            <button onclick="window.adminApp.setTab('dashboard')" class="px-5 py-2 rounded-xl text-xs font-bold uppercase transition-all ${tab === 'dashboard' ? 'bg-slate-300/80 text-slate-800 shadow-inner' : 'bg-slate-200/50 text-slate-600 hover:bg-slate-200'}">
+              DASHBOARD
+            </button>
+            <button onclick="window.adminApp.setTab('guru')" class="px-5 py-2 rounded-xl text-xs font-bold uppercase transition-all ${tab === 'guru' ? 'bg-slate-300/80 text-slate-800 shadow-inner' : 'bg-slate-200/50 text-slate-600 hover:bg-slate-200'}">
+              DATA GURU
+            </button>
+            <button onclick="window.adminApp.setTab('siswa')" class="px-5 py-2 rounded-xl text-xs font-bold uppercase transition-all ${tab === 'siswa' ? 'bg-slate-300/80 text-slate-800 shadow-inner' : 'bg-slate-200/50 text-slate-600 hover:bg-slate-200'}">
+              DATA SISWA
+            </button>
+            <button onclick="window.adminApp.setTab('jadwal')" class="px-5 py-2 rounded-xl text-xs font-bold uppercase transition-all ${tab === 'jadwal' ? 'bg-slate-300/80 text-slate-800 shadow-inner' : 'bg-slate-200/50 text-slate-600 hover:bg-slate-200'}">
+              JADWAL & TOKEN
+            </button>
+          </div>
+
+          <!-- TAB CONTENT -->
+          ${tab === 'dashboard' ? this.renderTabDashboardContent() : ''}
+          ${tab === 'guru' ? this.renderTabGuruContent() : ''}
+          ${tab === 'siswa' ? this.renderTabSiswaContent() : ''}
+          ${tab === 'jadwal' ? this.renderTabJadwalContent() : ''}
+        `;
+      }
+
+      renderTabDashboardContent() {
+        const db = this.db;
+        return `
+          <!-- 3 STATS CARD (Persis Gambar Canva) -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
+            
+            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center justify-between">
               <div>
-                <h2 class="font-bold text-slate-900 text-lg">Panel Kontrol Super Admin</h2>
-                <p class="text-xs text-slate-500">Kelola Guru, Siswa, dan Jadwal Ujian Terpusat</p>
+                <p class="text-xs font-extrabold text-slate-700 uppercase tracking-wide mb-1">TOTAL GURU</p>
+                <p class="text-4xl font-black text-slate-900">${db.teachers.length}</p>
+              </div>
+              <div class="p-3 bg-emerald-800 text-white rounded-2xl">
+                <i data-lucide="user" class="w-8 h-8"></i>
               </div>
             </div>
 
-            <!-- Stats Ringkas -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-                <div class="p-3.5 bg-indigo-50 text-indigo-600 rounded-xl">
-                  <i data-lucide="user-check" class="w-7 h-7"></i>
-                </div>
-                <div>
-                  <p class="text-xs font-semibold text-slate-400 uppercase">Total Guru</p>
-                  <p class="text-xl font-bold text-slate-900">${db.teachers.length}</p>
-                </div>
+            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center justify-between">
+              <div>
+                <p class="text-xs font-extrabold text-slate-700 uppercase tracking-wide mb-1">TOTAL SISWA TERDAFTAR</p>
+                <p class="text-4xl font-black text-slate-900">${db.students.length}</p>
               </div>
-              <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-                <div class="p-3.5 bg-emerald-50 text-emerald-600 rounded-xl">
-                  <i data-lucide="users" class="w-7 h-7"></i>
-                </div>
-                <div>
-                  <p class="text-xs font-semibold text-slate-400 uppercase">Total Siswa</p>
-                  <p class="text-xl font-bold text-slate-900">${db.students.length}</p>
-                </div>
+              <div class="p-3 bg-emerald-800 text-white rounded-2xl">
+                <i data-lucide="users" class="w-8 h-8"></i>
               </div>
-              <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-                <div class="p-3.5 bg-amber-50 text-amber-600 rounded-xl">
-                  <i data-lucide="calendar" class="w-7 h-7"></i>
-                </div>
-                <div>
-                  <p class="text-xs font-semibold text-slate-400 uppercase">Jadwal Ujian</p>
-                  <p class="text-xl font-bold text-slate-900">${db.schedules.length}</p>
-                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center justify-between">
+              <div>
+                <p class="text-xs font-extrabold text-slate-700 uppercase tracking-wide mb-1">UJIAN SEDANG AKTIF</p>
+                <p class="text-4xl font-black text-slate-900">${db.schedules.length}</p>
               </div>
+              <div class="p-3 bg-emerald-800 text-white rounded-2xl">
+                <i data-lucide="clock" class="w-8 h-8"></i>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- INFORMASI SISTEM CBT CARD (Persis Gambar Canva) -->
+          <div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm space-y-3">
+            <div class="flex items-center gap-2 text-emerald-800">
+              <i data-lucide="info" class="w-6 h-6"></i>
+              <h3 class="font-bold text-slate-900 text-base">Informasi Sistem CBT</h3>
+            </div>
+            <p class="text-xs leading-relaxed text-slate-600 font-medium">
+              Sistem ini beroperasi 100% Client-side menggunakan LocalStorage. Semua data seperti akun pengguna, jadwal ujian, bank soal, dan nilai disimpan secara offline di browser ini. Anda dapat menguji seluruh fungsi mulai dari pembuatan guru, pengisian bank soal, pengerjaan oleh siswa, hingga rilis nilai tanpa butuh database server.
+            </p>
+          </div>
+        `;
+      }
+
+      renderTabGuruContent() {
+        const db = this.db;
+        return `
+          <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+            <div class="flex justify-between items-center">
+              <h3 class="font-bold text-slate-900 text-sm">Data Pengampu Guru</h3>
+              <button onclick="window.adminApp.openAddGuruModal()" class="bg-[#0f4c42] hover:bg-[#0d3b36] text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1">
+                <i data-lucide="plus" class="w-4 h-4"></i> Tambah Guru
+              </button>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs text-slate-700">
+                <thead class="bg-slate-100 font-bold text-slate-800 uppercase">
+                  <tr>
+                    <th class="p-3 rounded-l-xl">Nama Guru</th>
+                    <th class="p-3">Username</th>
+                    <th class="p-3">Mata Pelajaran</th>
+                    <th class="p-3 rounded-r-xl text-right">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  ${db.teachers.map(t => `
+                    <tr>
+                      <td class="p-3 font-bold text-slate-900">${t.name}</td>
+                      <td class="p-3 font-mono text-emerald-700">${t.username}</td>
+                      <td class="p-3">${(t.subjects || []).join(', ')}</td>
+                      <td class="p-3 text-right">
+                        <button onclick="window.adminApp.deleteGuru('${t.id}')" class="text-rose-600 hover:text-rose-800 font-bold">Hapus</button>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
             </div>
           </div>
         `;
       }
-    }
 
-    window.addEventListener('DOMContentLoaded', () => {
-      window.adminApp = new AdminApp();
-    });
-  </script>
-</body>
-</html>
+      renderTabSiswaContent() {
+        const db = this.db;
+        return `
+          <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+            <div class="flex justify-between items-center">
+              <h3 class="font-bold text-slate-900 text-sm">Data Siswa Terdaftar</h3>
+              <button onclick="window.adminApp.openAddSiswaModal()" class="bg-[#0f4c42] hover:bg-[#0d3b36] text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1">
+                <i data-lucide="plus" class="w-4 h-4"></i> Tambah Siswa
+              </button>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs text-slate-700">
+                <thead class="bg-slate-100 font-bold text-slate-800 uppercase">
+                  <tr>
+                    <th class="p-3 rounded-l-xl">Nama Siswa</th>
+                    <th class="p-3">Username</th>
+                    <th class="p-3">Kelas</th>
+                    <th class="p-3 rounded-r-xl text-right">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  ${db.students.map(s => `
+                    <tr>
+                      <td class="p-3 font-bold text-slate-900">${s.name}</td>
+                      <td class="p-3 font-mono text-emerald-700">${s.username}</td>
+                      <td class="p-3"><span class="bg-slate-100 px-2 py-0.5 rounded text-slate-700 font-bold">${s.grade}</span></td>
+                      <td class="p-3 text-right">
+                        <button onclick="window.adminApp.
