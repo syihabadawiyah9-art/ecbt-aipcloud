@@ -107,51 +107,7 @@
       schedules: [
         { id: 'SCH01', subject: 'Informatika', grade: '7', token: 'AIP789' }
       ],
-      questions: [
-        {
-          id: 'Q1',
-          type: 'pg_tunggal',
-          text: 'Perangkat keras komputer yang berfungsi sebagai otak pemroses utama adalah... \\((CPU)\\)',
-          imageUrl: '',
-          options: ['RAM', 'Processor (CPU)', 'Harddisk', 'Power Supply'],
-          answer: 'Processor (CPU)',
-          score: 20
-        },
-        {
-          id: 'Q2',
-          type: 'pg_kompleks',
-          text: 'Pilihlah dua contoh perangkat masukan (input device) komputer:',
-          imageUrl: '',
-          options: ['Mouse', 'Monitor', 'Keyboard', 'Printer'],
-          answer: ['Mouse', 'Keyboard'],
-          score: 20
-        },
-        {
-          id: 'Q3',
-          type: 'benar_salah',
-          text: 'Monitor adalah contoh dari perangkat keras masukan (Input Device).',
-          imageUrl: '',
-          options: ['Benar', 'Salah'],
-          answer: 'Salah',
-          score: 20
-        },
-        {
-          id: 'Q4',
-          type: 'menjodohkan',
-          text: 'Jodohkan istilah komputasi berikut dengan kategorinya:',
-          pairs: [
-            { left: 'Windows 11', right: 'Sistem Operasi' },
-            { left: 'Google Chrome', right: 'Browser Web' }
-          ],
-          score: 20
-        },
-        {
-          id: 'Q5',
-          type: 'esai',
-          text: 'Jelaskan fungsi utama dari jaringan internet bagi aktivitas sekolah!',
-          score: 20
-        }
-      ],
+      questions: [],
       examResults: []
     };
 
@@ -193,6 +149,23 @@
 
       get db() { return DBController.get(); }
       saveDB(data) { DBController.save(data); }
+
+      // MENDAPATKAN SOAL KHUSUS MAPEL & KELAS UJIAN AKTIF
+      getActiveQuestions() {
+        const allQ = this.db.questions || [];
+        if (!this.activeSchedule) return allQ;
+
+        const subj = this.activeSchedule.subject;
+        const grade = this.activeStudent ? this.activeStudent.grade : null;
+
+        const filtered = allQ.filter(q => {
+          const matchSubj = !q.subject || q.subject === subj;
+          const matchGrade = !q.grade || q.grade === grade;
+          return matchSubj && matchGrade;
+        });
+
+        return filtered.length > 0 ? filtered : allQ;
+      }
 
       showToast(msg, type = 'success') {
         const container = document.getElementById('toast-container');
@@ -356,8 +329,7 @@
 
       // 3. DASHBOARD SOAL CBT
       renderExamDashboard() {
-        const db = this.db;
-        const questions = db.questions || [];
+        const questions = this.getActiveQuestions();
         const currentQ = questions[this.currentQuestionIdx];
         if (!currentQ) return `<div class="p-8 text-center font-bold">Soal Belum Tersedia.</div>`;
 
@@ -407,7 +379,7 @@
               <div class="space-y-4">
                 <div class="flex justify-between items-center border-b border-slate-200 pb-3">
                   <span class="bg-[#0f4c42] text-white text-xs font-bold px-3 py-1 rounded-xl">Soal No. ${this.currentQuestionIdx + 1} / ${totalQ}</span>
-                  <span class="text-xs font-bold text-slate-500 uppercase">${currentQ.type.replace('_', ' ')}</span>
+                  <span class="text-xs font-bold text-slate-500 uppercase">${currentQ.type ? currentQ.type.replace('_', ' ') : 'SOAL'}</span>
                 </div>
 
                 <div class="text-sm font-semibold text-slate-800 leading-relaxed">
@@ -530,7 +502,7 @@
       }
 
       nextQuestion() {
-        const total = (this.db.questions || []).length;
+        const total = this.getActiveQuestions().length;
         if (this.currentQuestionIdx < total - 1) {
           this.currentQuestionIdx++;
           this.render();
@@ -547,7 +519,7 @@
       finishExam() {
         if (confirm('Apakah Anda yakin ingin menyelesaikan ujian ini?')) {
           const db = this.db;
-          const questions = db.questions || [];
+          const questions = this.getActiveQuestions();
           
           let pgTotalScore = 0;
           const essayAnswers = {};
