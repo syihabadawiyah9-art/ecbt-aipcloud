@@ -478,7 +478,7 @@
 
                     <div>
                       <label class="block font-bold text-slate-700 mb-1">URL Gambar (Opsional)</label>
-                      <input type="text" placeholder="https://..." value="${s.imageUrl \vert{}\vert{} ''}" oninput="window.guruApp.updateSlotImage(${idx}, this.value)" class="w-full p-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0f4c42] outline-none">
+                      <input type="text" placeholder="https://..." value="${s.imageUrl || ''}" oninput="window.guruApp.updateSlotImage(${idx}, this.value)" class="w-full p-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0f4c42] outline-none">
                     </div>
 
                     ${s.type !== 'esai' ? `
