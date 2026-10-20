@@ -12,6 +12,8 @@
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" id="MathJax-script" async></script>
   <!-- Mammoth JS (Untuk Membaca File Word .docx di Browser) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+  <!-- SheetJS (Untuk Export File Excel .xlsx) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <!-- Font Serif Display & Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -290,14 +292,21 @@
       }
 
       renderTabSoalContent() {
+        let formHTML = '';
         if (!this.bankConfig) {
-          return this.renderConfigBankSoalForm();
+          formHTML = this.renderConfigBankSoalForm();
         } else {
-          return this.renderFormPembuatanSoal();
+          formHTML = this.renderFormPembuatanSoal();
         }
+
+        return `
+          <div class="space-y-8">
+            ${formHTML}
+            ${this.renderSavedQuestionsList()}
+          </div>
+        `;
       }
 
-      // LANGKAH 1: PENGATURAN KELAS/TINGKAT, MATA PELAJARAN, MULTI JENIS & JUMLAH SOAL
       renderConfigBankSoalForm() {
         const subjects = this.activeGuru.subjects || ['Informatika', 'BK'];
 
@@ -324,7 +333,6 @@
 
             <form onsubmit="window.guruApp.handleGenerateSlots(event)" class="space-y-5 text-xs">
               
-              <!-- PILIH KELAS / TINGKAT -->
               <div>
                 <label class="block font-bold text-slate-700 mb-1">Pilih Kelas / Peruntukan Soal</label>
                 <select id="cfg-grade" required class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0f4c42] outline-none font-bold">
@@ -332,7 +340,6 @@
                 </select>
               </div>
 
-              <!-- PILIH MAPEL -->
               <div>
                 <label class="block font-bold text-slate-700 mb-1">Pilih Mata Pelajaran</label>
                 <select id="cfg-subj" required class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0f4c42] outline-none font-bold">
@@ -340,7 +347,6 @@
                 </select>
               </div>
 
-              <!-- PILIH JENIS & JUMLAH SOAL -->
               <div>
                 <label class="block font-bold text-slate-700 mb-2">Pilih Jenis Soal & Jumlahnya</label>
                 <div class="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
@@ -422,7 +428,6 @@
         this.render();
       }
 
-      // LANGKAH 2: FORM ISI SOAL & FITUR UNDUH/UNGGAH WORD (.DOCX)
       renderFormPembuatanSoal() {
         const cfg = this.bankConfig;
         const gradeLabel = cfg.grade === 'olimpiade' ? 'Olimpiade' : `Kelas ${cfg.grade}`;
@@ -441,7 +446,6 @@
                 </h3>
               </div>
 
-              <!-- DUA OPSI: DOKUMEN WORD (.DOCX) ATAU MANUAL -->
               <div class="flex items-center gap-2 flex-wrap">
                 <button onclick="window.guruApp.downloadDocxGuide()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1 border border-slate-300">
                   <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Unduh Panduan Format Word
@@ -455,7 +459,6 @@
               </div>
             </div>
 
-            <!-- FORM MANUAL DI WEB -->
             <form onsubmit="window.guruApp.saveAllQuestionsToCloud(event)" class="space-y-6">
               <div class="space-y-4">
                 ${this.generatedSlots.map((s, idx) => `
@@ -508,6 +511,175 @@
         `;
       }
 
+      renderSavedQuestionsList() {
+        const db = this.db;
+        const questions = db.questions || [];
+
+        return `
+          <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-200 pb-3 flex-wrap gap-2">
+              <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+                <i data-lucide="database" class="w-4 h-4 text-[#0f4c42]"></i>
+                Daftar Soal Tersimpan di Cloud Realtime (${questions.length} Soal)
+              </h3>
+              ${questions.length > 0 ? `
+                <button onclick="window.guruApp.clearAllQuestions()" class="text-rose-600 hover:text-rose-800 text-xs font-bold flex items-center gap-1">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Hapus Semua Soal
+                </button>
+              ` : ''}
+            </div>
+
+            ${questions.length === 0 ? `
+              <p class="text-xs text-slate-400 text-center py-6">Belum ada bank soal yang tersimpan di cloud.</p>
+            ` : `
+              <div class="space-y-3">
+                ${questions.map((q, idx) => `
+                  <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex justify-between items-start gap-4 text-xs">
+                    <div class="space-y-1.5 flex-grow">
+                      <div class="flex items-center gap-2 flex-wrap">
+                        <span class="font-bold text-[#0f4c42]">No. ${idx + 1}</span>
+                        <span class="bg-amber-100 text-amber-900 text-[10px] font-black uppercase px-2 py-0.5 rounded-full">${q.grade === 'olimpiade' ? 'Olimpiade' : 'Kelas ' + q.grade}</span>
+                        <span class="bg-emerald-100 text-emerald-900 text-[10px] font-black uppercase px-2 py-0.5 rounded-full">${q.subject || 'Mapel'}</span>
+                        <span class="bg-slate-200 text-slate-700 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded">${(q.type || 'pg_tunggal').replace('_', ' ')}</span>
+                        <span class="text-slate-400 text-[10px] font-bold">Bobot: ${q.score || 0}</span>
+                      </div>
+                      <p class="font-semibold text-slate-800">${q.text}</p>
+                      ${q.type !== 'esai' ? `
+                        <p class="text-emerald-700 font-bold text-[11px]">KUNCI: ${Array.isArray(q.answer) ? q.answer.join(', ') : q.answer}</p>
+                      ` : ''}
+                    </div>
+
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                      <button onclick="window.guruApp.openEditQuestionModal(${idx})" class="bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg text-xs font-bold border border-blue-200 flex items-center gap-1">
+                        <i data-lucide="edit-3" class="w-3.5 h-3.5"></i> Edit
+                      </button>
+                      <button onclick="window.guruApp.deleteQuestion(${idx})" class="bg-rose-50 hover:bg-rose-100 text-rose-700 px-3 py-1.5 rounded-lg text-xs font-bold border border-rose-200 flex items-center gap-1">
+                        <i data-lucide="trash" class="w-3.5 h-3.5"></i> Hapus
+                      </button>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            `}
+          </div>
+        `;
+      }
+
+      openEditQuestionModal(qIdx) {
+        const db = this.db;
+        const q = db.questions[qIdx];
+        if (!q) return;
+
+        const optionsStr = Array.isArray(q.options) ? q.options.join(', ') : '';
+        const answerStr = Array.isArray(q.answer) ? q.answer.join(', ') : (q.answer || '');
+
+        this.showModal(`
+          <div class="space-y-4 text-xs">
+            <h3 class="font-bold text-slate-900 text-sm border-b border-slate-200 pb-2">Edit Soal No. ${qIdx + 1}</h3>
+
+            <form onsubmit="window.guruApp.saveEditedQuestion(event, ${qIdx})" class="space-y-3">
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block font-bold text-slate-700 mb-1">Kelas</label>
+                  <select id="edit-q-grade" class="w-full p-2 border border-slate-200 rounded-xl font-bold">
+                    <option value="7" ${q.grade === '7' ? 'selected' : ''}>Kelas 7</option>
+                    <option value="8" ${q.grade === '8' ? 'selected' : ''}>Kelas 8</option>
+                    <option value="9" ${q.grade === '9' ? 'selected' : ''}>Kelas 9</option>
+                    <option value="olimpiade" ${q.grade === 'olimpiade' ? 'selected' : ''}>Olimpiade</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block font-bold text-slate-700 mb-1">Bobot Nilai</label>
+                  <input type="number" id="edit-q-score" value="${q.score || 20}" required class="w-full p-2 border border-slate-200 rounded-xl font-bold">
+                </div>
+              </div>
+
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">Pertanyaan Soal</label>
+                <textarea id="edit-q-text" rows="3" required class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#0f4c42]">${q.text}</textarea>
+              </div>
+
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">URL Gambar (Opsional)</label>
+                <input type="text" id="edit-q-image" value="${q.imageUrl || ''}" placeholder="https://..." class="w-full p-2 border border-slate-200 rounded-xl outline-none">
+              </div>
+
+              ${q.type !== 'esai' ? `
+                <div>
+                  <label class="block font-bold text-slate-700 mb-1">Pilihan Jawaban (Pisahkan Komma)</label>
+                  <input type="text" id="edit-q-options" value="${optionsStr}" placeholder="Pilihan A, Pilihan B, Pilihan C, Pilihan D" class="w-full p-2 border border-slate-200 rounded-xl outline-none">
+                </div>
+                <div>
+                  <label class="block font-bold text-slate-700 mb-1">Kunci Jawaban Tepat</label>
+                  <input type="text" id="edit-q-answer" value="${answerStr}" required placeholder="Kunci Jawaban" class="w-full p-2 border border-slate-200 rounded-xl outline-none font-bold">
+                </div>
+              ` : ''}
+
+              <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                <button type="button" onclick="window.guruApp.closeModal()" class="px-4 py-2 rounded-xl font-bold text-slate-500 bg-slate-100">Batal</button>
+                <button type="submit" class="px-5 py-2 rounded-xl font-bold text-white bg-[#0f4c42]">Simpan Perubahan</button>
+              </div>
+            </form>
+          </div>
+        `);
+      }
+
+      saveEditedQuestion(e, qIdx) {
+        e.preventDefault();
+        const db = this.db;
+        if (!db.questions || !db.questions[qIdx]) return;
+
+        const grade = document.getElementById('edit-q-grade').value;
+        const score = parseFloat(document.getElementById('edit-q-score').value) || 0;
+        const text = document.getElementById('edit-q-text').value.trim();
+        const imageUrl = document.getElementById('edit-q-image').value.trim();
+
+        db.questions[qIdx].grade = grade;
+        db.questions[qIdx].score = score;
+        db.questions[qIdx].text = text;
+        db.questions[qIdx].imageUrl = imageUrl;
+
+        if (db.questions[qIdx].type !== 'esai') {
+          const optionsInput = document.getElementById('edit-q-options').value;
+          const answerInput = document.getElementById('edit-q-answer').value;
+
+          db.questions[qIdx].options = optionsInput.split(',').map(s => s.trim()).filter(s => s.length > 0);
+          
+          if (db.questions[qIdx].type === 'pg_kompleks') {
+            db.questions[qIdx].answer = answerInput.split(',').map(s => s.trim()).filter(s => s.length > 0);
+          } else {
+            db.questions[qIdx].answer = answerInput.trim();
+          }
+        }
+
+        this.saveDB(db);
+        this.showToast('Soal Berhasil Diperbarui!');
+        this.closeModal();
+        this.render();
+      }
+
+      deleteQuestion(qIdx) {
+        if (confirm(`Apakah Anda yakin ingin menghapus soal no. ${qIdx + 1}?`)) {
+          const db = this.db;
+          if (db.questions && db.questions[qIdx]) {
+            db.questions.splice(qIdx, 1);
+            this.saveDB(db);
+            this.showToast('Soal berhasil dihapus');
+            this.render();
+          }
+        }
+      }
+
+      clearAllQuestions() {
+        if (confirm('PERINGATAN: Apakah Anda yakin ingin menghapus SELURUH bank soal di cloud?')) {
+          const db = this.db;
+          db.questions = [];
+          this.saveDB(db);
+          this.showToast('Semua soal berhasil dibersihkan');
+          this.render();
+        }
+      }
+
       updateSlotText(idx, val) { this.generatedSlots[idx].text = val; }
       updateSlotImage(idx, val) { this.generatedSlots[idx].imageUrl = val; }
       updateSlotScore(idx, val) { this.generatedSlots[idx].score = parseFloat(val) || 0; }
@@ -524,7 +696,6 @@
         }
       }
 
-      // UNDUH PETUNJUK FORMAT WORD (.DOCX)
       downloadDocxGuide() {
         const textContent = `PANDUAN FORMAT SOAL WORD (.DOCX) - E-CBT AIP CLOUD\n\n` +
           `Ketikkan soal di Microsoft Word dengan format struktur sederhana berikut:\n\n` +
@@ -547,7 +718,6 @@
         this.showToast('File petunjuk format berhasil diunduh!');
       }
 
-      // UNGGAH DAN BACA FILE WORD (.DOCX) DENGAN MAMMOTH.JS
       handleUploadDocxTemplate(e) {
         const file = e.target.files[0];
         if (!file) return;
@@ -636,13 +806,21 @@
         this.render();
       }
 
+      // FITUR HASIL UJIAN & EXPORT DENGAN STRUKTUR TEMPLATE EXCEL
       renderTabNilaiContent() {
         const db = this.db;
         const results = db.examResults || [];
 
         return `
           <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
-            <h3 class="font-bold text-slate-900 text-sm">Hasil Ujian Siswa (Live Realtime)</h3>
+            <div class="flex justify-between items-center border-b border-slate-200 pb-3 flex-wrap gap-2">
+              <h3 class="font-bold text-slate-900 text-sm">Hasil Ujian Siswa (Live Realtime)</h3>
+              ${results.length > 0 ? `
+                <button onclick="window.guruApp.downloadExcelResults()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow transition-all">
+                  <i data-lucide="download" class="w-4 h-4"></i> Download Rekap Excel (.xlsx)
+                </button>
+              ` : ''}
+            </div>
 
             <div class="overflow-x-auto">
               <table class="w-full text-left text-xs text-slate-700">
@@ -679,6 +857,52 @@
             </div>
           </div>
         `;
+      }
+
+      // EKSPOR HASIL KELUARAN PRESISI SESUAI TEMPLATE
+      downloadExcelResults() {
+        const db = this.db;
+        const results = db.examResults || [];
+        if (results.length === 0) {
+          this.showToast('Belum ada data nilai untuk diunduh!', 'error');
+          return;
+        }
+
+        const sample = results[0];
+        const gradeMapelText = `Kelas ${sample.grade}/${sample.subject}`;
+
+        // SUSUN MATRIKS SESUAI STRUCTURE TEMPLATE
+        const excelData = [
+          ['NILAI SISWA', '', '', ''],
+          ['Kelas/Mapel', gradeMapelText, '', ''],
+          ['', '', '', ''],
+          ['No', 'ID Siswa', 'Nama', 'Nilai']
+        ];
+
+        results.forEach((r, idx) => {
+          excelData.push([
+            idx + 1,
+            r.studentId || (idx + 1).toString().padStart(3, '0'),
+            r.studentName || '',
+            (r.pgScore || 0) + (r.essayScore || 0)
+          ]);
+        });
+
+        const worksheet = XLSX.utils.aoa_to_sheet(excelData);
+        
+        // MENGATUR LEBAR KOLOM PRESISI
+        worksheet['!cols'] = [
+          { wch: 8 },  // No
+          { wch: 15 }, // ID Siswa
+          { wch: 35 }, // Nama
+          { wch: 12 }  // Nilai
+        ];
+
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+
+        XLSX.writeFile(workbook, `Nilai_Siswa_${sample.subject}_Kelas_${sample.grade}.xlsx`);
+        this.showToast('File Excel Rekap Nilai Berhasil Diunduh!');
       }
 
       openKoreksiModal(resIdx) {
