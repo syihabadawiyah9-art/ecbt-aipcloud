@@ -167,24 +167,17 @@
     class AdminApp {
       constructor() {
         this.activeTab = 'dashboard';
-        this.teacherSubTab = 'guru'; // 'mapel' | 'guru'
-        this.monitoringTab = 'kontrol'; // 'kontrol' | 'rekap'
+        this.teacherSubTab = 'guru';
+        this.monitoringTab = 'kontrol';
         this.studentFilterGrade = 'ALL';
         this.studentSearch = '';
         
         DBController.initListener(() => this.render());
-
-        // Interval Pengecekan Waktu Otomatis Saklar Non-aktif
         setInterval(() => this.checkScheduleAutoExpiration(), 10000);
       }
 
-      get db() {
-        return DBController.get();
-      }
-
-      saveDB(data) {
-        DBController.save(data);
-      }
+      get db() { return DBController.get(); }
+      saveDB(data) { DBController.save(data); }
 
       showToast(msg, type = 'success') {
         const container = document.getElementById('toast-container');
@@ -210,7 +203,6 @@
         setTimeout(() => container.classList.add('hidden'), 200);
       }
 
-      // CEK OTOMATIS: JIKA WAKTU SELESAI TERLEWATI, MATIKAN SESI
       checkScheduleAutoExpiration() {
         const db = this.db;
         if (!db.schedules) return;
@@ -276,10 +268,7 @@
         const p = document.getElementById('a-pass').value.trim();
         const db = this.db;
 
-        const validUser = db.adminUser || 'adminutama';
-        const validPass = db.adminPassword || 'superadmin123';
-
-        if (u === validUser && p === validPass) {
+        if (u === (db.adminUser || 'adminutama') && p === (db.adminPassword || 'superadmin123')) {
           db.adminSession = true;
           this.saveDB(db);
           this.closeModal();
@@ -403,7 +392,6 @@
         const tab = this.activeTab;
 
         return `
-          <!-- CAPSULE NAV TABS 5 MODUL -->
           <div class="bg-white/90 p-2 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-center gap-2 flex-wrap max-w-4xl mx-auto">
             <button onclick="window.adminApp.setTab('dashboard')" class="px-4 py-2 rounded-xl text-xs font-bold uppercase transition-all ${tab === 'dashboard' ? 'bg-[#0f4c42] text-white shadow' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
               1. Dashboard
@@ -422,7 +410,6 @@
             </button>
           </div>
 
-          <!-- TAB CONTENT -->
           ${tab === 'dashboard' ? this.renderTabDashboardContent() : ''}
           ${tab === 'siswa' ? this.renderTabSiswaContent() : ''}
           ${tab === 'guru' ? this.renderTabGuruContent() : ''}
@@ -431,15 +418,12 @@
         `;
       }
 
-      // MODUL 1: DASHBOARD UTAMA
       renderTabDashboardContent() {
         const db = this.db;
         const activeSchedules = (db.schedules || []).filter(s => s.isActive);
 
         return `
           <div class="space-y-6 pt-2">
-            
-            <!-- 3 METRIC CARDS STATISTIK -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div onclick="window.adminApp.setTab('guru')" class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center justify-between cursor-pointer hover:border-emerald-500 transition-all">
                 <div>
@@ -475,7 +459,6 @@
               </div>
             </div>
 
-            <!-- TABEL STATUS RINGKAS JADWAL & TOKEN AKTIF -->
             <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
               <div class="border-b border-slate-200 pb-3 flex justify-between items-center">
                 <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
@@ -520,12 +503,11 @@
                 ${(db.schedules || []).length === 0 ? `<p class="text-xs text-slate-400 text-center py-6">Belum ada jadwal ujian yang dibuat.</p>` : ''}
               </div>
             </div>
-
           </div>
         `;
       }
 
-      // MODUL 2: KELOLA SISWA (MASTER DATA)
+      // MODUL 2: KELOLA SISWA (EDIT + CLEAR ALL)
       downloadSiswaTemplateExcel() {
         const templateData = [
           ['ID', 'Username', 'Password', 'NAMA ', 'Kelas'],
@@ -586,16 +568,24 @@
         reader.readAsArrayBuffer(file);
       }
 
+      clearAllSiswa() {
+        if (confirm('Apakah Anda YAKIN ingin MENGHAPUS SEMUA DATA SISWA? Data yang terhapus tidak bisa dikembalikan!')) {
+          const db = this.db;
+          db.students = [];
+          this.saveDB(db);
+          this.showToast('Seluruh data siswa berhasil dibersihkan!');
+          this.render();
+        }
+      }
+
       renderTabSiswaContent() {
         const db = this.db;
         let students = db.students || [];
 
-        // Filter Tingkat
         if (this.studentFilterGrade !== 'ALL') {
           students = students.filter(s => String(s.grade).toLowerCase() === this.studentFilterGrade.toLowerCase());
         }
 
-        // Pencarian
         if (this.studentSearch) {
           const q = this.studentSearch.toLowerCase();
           students = students.filter(s => (s.name && s.name.toLowerCase().includes(q)) || (s.username && s.username.toLowerCase().includes(q)) || (s.id && s.id.toLowerCase().includes(q)));
@@ -612,18 +602,20 @@
 
               <div class="flex items-center gap-2 flex-wrap">
                 <button onclick="window.adminApp.downloadSiswaTemplateExcel()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 border border-slate-300">
-                  <i data-lucide="download" class="w-3.5 h-3.5"></i> Download Template Excel
+                  <i data-lucide="download" class="w-3.5 h-3.5"></i> Download Template
                 </button>
                 <button onclick="window.adminApp.triggerImportSiswa()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 border border-emerald-300">
                   <i data-lucide="file-spread-sheet" class="w-3.5 h-3.5"></i> Impor File Excel
                 </button>
-                <button onclick="window.adminApp.openAddSiswaModal()" class="bg-[#0f4c42] hover:bg-[#0d3b36] text-white px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1">
+                <button onclick="window.adminApp.openSiswaModal()" class="bg-[#0f4c42] hover:bg-[#0d3b36] text-white px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1">
                   <i data-lucide="plus" class="w-3.5 h-3.5"></i> Tambah Siswa
+                </button>
+                <button onclick="window.adminApp.clearAllSiswa()" class="bg-rose-600 hover:bg-rose-700 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 shadow">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Clear All Siswa
                 </button>
               </div>
             </div>
 
-            <!-- TABS FILTER TINGKAT UTAMA & SEARCH -->
             <div class="flex justify-between items-center flex-wrap gap-3">
               <div class="flex gap-1 bg-slate-100 p-1 rounded-xl">
                 <button onclick="window.adminApp.studentFilterGrade='ALL'; window.adminApp.render();" class="px-3 py-1 rounded-lg text-xs font-bold ${this.studentFilterGrade === 'ALL' ? 'bg-[#0f4c42] text-white' : 'text-slate-600'}">SEMUA</button>
@@ -661,7 +653,10 @@
                       <td class="p-3 font-bold text-slate-900">${s.name}</td>
                       <td class="p-3"><span class="bg-amber-100 text-amber-900 px-2.5 py-0.5 rounded font-black">Tingkat ${s.grade}</span></td>
                       <td class="p-3 text-right">
-                        <button onclick="window.adminApp.deleteSiswa('${s.id}')" class="text-rose-600 hover:text-rose-800 font-bold">Hapus</button>
+                        <div class="flex items-center justify-end gap-2">
+                          <button onclick="window.adminApp.openSiswaModal('${s.id}')" class="text-blue-600 hover:text-blue-800 font-bold bg-blue-50 px-2.5 py-1 rounded border border-blue-200">Edit</button>
+                          <button onclick="window.adminApp.deleteSiswa('${s.id}')" class="text-rose-600 hover:text-rose-800 font-bold bg-rose-50 px-2.5 py-1 rounded border border-rose-200">Hapus</button>
+                        </div>
                       </td>
                     </tr>
                   `).join('')}
@@ -673,71 +668,89 @@
         `;
       }
 
-      openAddSiswaModal() {
+      openSiswaModal(editId = null) {
+        const db = this.db;
+        const target = editId ? (db.students || []).find(s => s.id === editId) : null;
+
         this.showModal(`
           <div class="space-y-4 text-xs">
-            <h3 class="font-bold text-slate-900 text-sm">Tambah Data Siswa Baru</h3>
-            <form onsubmit="window.adminApp.saveSiswa(event)" class="space-y-3">
+            <h3 class="font-bold text-slate-900 text-sm">${target ? 'Edit Data Siswa' : 'Tambah Data Siswa Baru'}</h3>
+            <form onsubmit="window.adminApp.saveSiswa(event, '${editId || ''}')" class="space-y-3">
               <div>
                 <label class="block font-bold text-slate-700 mb-1">ID Siswa</label>
-                <input type="text" id="s-id" required placeholder="006" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#0f4c42]">
+                <input type="text" id="s-id" value="${target ? target.id : ''}" required placeholder="006" ${target ? 'readonly class="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-100 font-mono font-bold"' : 'class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#0f4c42]"'}>
               </div>
               <div>
                 <label class="block font-bold text-slate-700 mb-1">Username Login</label>
-                <input type="text" id="s-user" required placeholder="arsyad006" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#0f4c42]">
+                <input type="text" id="s-user" value="${target ? target.username : ''}" required placeholder="arsyad006" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#0f4c42]">
               </div>
               <div>
                 <label class="block font-bold text-slate-700 mb-1">Password</label>
-                <input type="text" id="s-pass" value="123" required class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#0f4c42]">
+                <input type="text" id="s-pass" value="${target ? target.password : '123'}" required class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#0f4c42]">
               </div>
               <div>
                 <label class="block font-bold text-slate-700 mb-1">Nama Lengkap Siswa</label>
-                <input type="text" id="s-name" required placeholder="MUHAMMAD ARSYAD" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#0f4c42]">
+                <input type="text" id="s-name" value="${target ? target.name : ''}" required placeholder="MUHAMMAD ARSYAD" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#0f4c42]">
               </div>
               <div>
                 <label class="block font-bold text-slate-700 mb-1">Pilih Tingkat / Kelas Utama</label>
                 <select id="s-grade" class="w-full p-2.5 border border-slate-200 rounded-xl font-bold">
-                  <option value="7">Tingkat 7</option>
-                  <option value="8">Tingkat 8</option>
-                  <option value="9">Tingkat 9</option>
-                  <option value="Olimpiade">Olimpiade</option>
+                  <option value="7" ${target && target.grade === '7' ? 'selected' : ''}>Tingkat 7</option>
+                  <option value="8" ${target && target.grade === '8' ? 'selected' : ''}>Tingkat 8</option>
+                  <option value="9" ${target && target.grade === '9' ? 'selected' : ''}>Tingkat 9</option>
+                  <option value="Olimpiade" ${target && target.grade === 'Olimpiade' ? 'selected' : ''}>Olimpiade</option>
                 </select>
               </div>
               <div class="flex justify-end gap-2 pt-2">
                 <button type="button" onclick="window.adminApp.closeModal()" class="px-4 py-2 rounded-xl font-bold text-slate-500 bg-slate-100">Batal</button>
-                <button type="submit" class="px-5 py-2 rounded-xl font-bold text-white bg-[#0f4c42]">Simpan Siswa</button>
+                <button type="submit" class="px-5 py-2 rounded-xl font-bold text-white bg-[#0f4c42]">Simpan Data Siswa</button>
               </div>
             </form>
           </div>
         `);
       }
 
-      saveSiswa(e) {
+      saveSiswa(e, editId) {
         e.preventDefault();
         const db = this.db;
         if (!db.students) db.students = [];
-        db.students.push({
-          id: document.getElementById('s-id').value.trim() || ('00' + (db.students.length + 1)),
-          username: document.getElementById('s-user').value.trim(),
-          password: document.getElementById('s-pass').value.trim(),
-          name: document.getElementById('s-name').value.trim(),
-          grade: document.getElementById('s-grade').value
-        });
+
+        const id = document.getElementById('s-id').value.trim();
+        const username = document.getElementById('s-user').value.trim();
+        const password = document.getElementById('s-pass').value.trim();
+        const name = document.getElementById('s-name').value.trim();
+        const grade = document.getElementById('s-grade').value;
+
+        if (editId) {
+          const idx = db.students.findIndex(s => s.id === editId);
+          if (idx !== -1) {
+            db.students[idx] = { id, username, password, name, grade };
+            this.showToast('Data Siswa berhasil diperbarui!');
+          }
+        } else {
+          db.students.push({
+            id: id || ('00' + (db.students.length + 1)),
+            username, password, name, grade
+          });
+          this.showToast('Siswa baru berhasil ditambahkan!');
+        }
+
         this.saveDB(db);
         this.closeModal();
-        this.showToast('Siswa berhasil ditambahkan!');
         this.render();
       }
 
       deleteSiswa(id) {
-        const db = this.db;
-        db.students = (db.students || []).filter(s => s.id !== id);
-        this.saveDB(db);
-        this.showToast('Data siswa dihapus!');
-        this.render();
+        if (confirm('Apakah Anda yakin ingin menghapus siswa ini?')) {
+          const db = this.db;
+          db.students = (db.students || []).filter(s => s.id !== id);
+          this.saveDB(db);
+          this.showToast('Data siswa dihapus!');
+          this.render();
+        }
       }
 
-      // MODAL 3: KELOLA GURU & MAPEL (DROPDOWN / CHECKLIST MAPEL)
+      // MODUL 3: KELOLA GURU & MAPEL (EDIT + CLEAR ALL)
       downloadGuruTemplateExcel() {
         const templateData = [
           ['No', 'Username', 'Nama', 'NIP/NPK/Peg.Id', 'Password', 'Mapel'],
@@ -784,7 +797,6 @@
 
             const subjectsArr = mapelStr ? mapelStr.split(',').map(s => s.trim()).filter(s => s.length > 0) : [];
 
-            // Daftarkan mapel baru ke Master Data jika belum ada
             subjectsArr.forEach(s => {
               if (!db.subjects.includes(s)) db.subjects.push(s);
             });
@@ -792,10 +804,7 @@
             if (name && username && !db.teachers.some(t => t.username === username)) {
               db.teachers.push({
                 id: '00' + (db.teachers.length + 1),
-                username,
-                name,
-                nuptk,
-                password,
+                username, name, nuptk, password,
                 subjects: subjectsArr
               });
               addedCount++;
@@ -808,6 +817,26 @@
           e.target.value = '';
         };
         reader.readAsArrayBuffer(file);
+      }
+
+      clearAllGuru() {
+        if (confirm('Apakah Anda YAKIN ingin MENGHAPUS SEMUA DATA GURU?')) {
+          const db = this.db;
+          db.teachers = [];
+          this.saveDB(db);
+          this.showToast('Seluruh data guru berhasil dibersihkan!');
+          this.render();
+        }
+      }
+
+      clearAllMapel() {
+        if (confirm('Apakah Anda YAKIN ingin MENGHAPUS SEMUA MASTER DATA MAPEL?')) {
+          const db = this.db;
+          db.subjects = [];
+          this.saveDB(db);
+          this.showToast('Seluruh Master Data Mapel dibersihkan!');
+          this.render();
+        }
       }
 
       renderTabGuruContent() {
@@ -841,12 +870,18 @@
 
         return `
           <div class="space-y-4 text-xs">
-            <form onsubmit="window.adminApp.addMasterSubject(event)" class="flex gap-2 items-center bg-slate-50 p-4 rounded-2xl border border-slate-200">
-              <input type="text" id="new-master-subject" required placeholder="Tambah Kode / Nama Mapel Baru (misal: Tahsin, IPA)" class="p-2.5 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-[#0f4c42] flex-grow">
-              <button type="submit" class="bg-[#0f4c42] text-white px-5 py-2.5 rounded-xl font-bold shadow">
-                + Tambah Mapel Ke System
+            <div class="flex justify-between items-center flex-wrap gap-2">
+              <form onsubmit="window.adminApp.addMasterSubject(event)" class="flex gap-2 items-center bg-slate-50 p-3 rounded-2xl border border-slate-200 flex-grow">
+                <input type="text" id="new-master-subject" required placeholder="Tambah Kode / Nama Mapel Baru (misal: Tahsin, IPA)" class="p-2.5 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-[#0f4c42] flex-grow">
+                <button type="submit" class="bg-[#0f4c42] text-white px-5 py-2.5 rounded-xl font-bold shadow">
+                  + Tambah Mapel
+                </button>
+              </form>
+
+              <button onclick="window.adminApp.clearAllMapel()" class="bg-rose-600 hover:bg-rose-700 text-white px-3.5 py-2.5 rounded-xl font-bold shadow flex items-center gap-1">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Clear All Mapel
               </button>
-            </form>
+            </div>
 
             <div class="overflow-x-auto">
               <table class="w-full text-left text-xs text-slate-700">
@@ -863,7 +898,10 @@
                       <td class="p-3 font-bold">${idx + 1}</td>
                       <td class="p-3 font-bold text-slate-900">${s}</td>
                       <td class="p-3 text-right">
-                        <button onclick="window.adminApp.deleteMasterSubject('${s}')" class="text-rose-600 hover:text-rose-800 font-bold">Hapus</button>
+                        <div class="flex items-center justify-end gap-2">
+                          <button onclick="window.adminApp.openEditMasterSubjectModal('${s}')" class="text-blue-600 font-bold bg-blue-50 px-2.5 py-1 rounded border border-blue-200">Edit</button>
+                          <button onclick="window.adminApp.deleteMasterSubject('${s}')" class="text-rose-600 font-bold bg-rose-50 px-2.5 py-1 rounded border border-rose-200">Hapus</button>
+                        </div>
                       </td>
                     </tr>
                   `).join('')}
@@ -872,6 +910,41 @@
             </div>
           </div>
         `;
+      }
+
+      openEditMasterSubjectModal(oldName) {
+        this.showModal(`
+          <div class="space-y-4 text-xs">
+            <h3 class="font-bold text-slate-900 text-sm">Edit Master Mapel</h3>
+            <form onsubmit="window.adminApp.saveEditedMasterSubject(event, '${oldName}')" class="space-y-3">
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">Nama Mata Pelajaran</label>
+                <input type="text" id="edit-master-subj-input" value="${oldName}" required class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#0f4c42]">
+              </div>
+              <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="window.adminApp.closeModal()" class="px-4 py-2 rounded-xl font-bold text-slate-500 bg-slate-100">Batal</button>
+                <button type="submit" class="px-5 py-2 rounded-xl font-bold text-white bg-[#0f4c42]">Simpan Mapel</button>
+              </div>
+            </form>
+          </div>
+        `);
+      }
+
+      saveEditedMasterSubject(e, oldName) {
+        e.preventDefault();
+        const db = this.db;
+        const newName = document.getElementById('edit-master-subj-input').value.trim();
+
+        if (newName && db.subjects) {
+          const idx = db.subjects.indexOf(oldName);
+          if (idx !== -1) {
+            db.subjects[idx] = newName;
+            this.saveDB(db);
+            this.showToast('Master Mapel berhasil diperbarui!');
+          }
+        }
+        this.closeModal();
+        this.render();
       }
 
       addMasterSubject(e) {
@@ -887,11 +960,13 @@
       }
 
       deleteMasterSubject(sName) {
-        const db = this.db;
-        db.subjects = (db.subjects || []).filter(s => s !== sName);
-        this.saveDB(db);
-        this.showToast('Mapel dihapus dari Master Data');
-        this.render();
+        if (confirm(`Hapus mapel '${sName}' dari Master Data?`)) {
+          const db = this.db;
+          db.subjects = (db.subjects || []).filter(s => s !== sName);
+          this.saveDB(db);
+          this.showToast('Mapel dihapus');
+          this.render();
+        }
       }
 
       renderSubTabGuru() {
@@ -904,13 +979,16 @@
               <h4 class="font-bold text-slate-900 text-xs">Daftar Guru Terdaftar (${teachers.length} Guru)</h4>
               <div class="flex items-center gap-2 flex-wrap">
                 <button onclick="window.adminApp.downloadGuruTemplateExcel()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 border border-slate-300">
-                  <i data-lucide="download" class="w-3.5 h-3.5"></i> Download Template (6 Kolom)
+                  <i data-lucide="download" class="w-3.5 h-3.5"></i> Download Template
                 </button>
                 <button onclick="window.adminApp.triggerImportGuru()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 border border-emerald-300">
-                  <i data-lucide="file-spread-sheet" class="w-3.5 h-3.5"></i> Impor File Excel Guru
+                  <i data-lucide="file-spread-sheet" class="w-3.5 h-3.5"></i> Impor File Excel
                 </button>
-                <button onclick="window.adminApp.openAddGuruModal()" class="bg-[#0f4c42] hover:bg-[#0d3b36] text-white px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1">
+                <button onclick="window.adminApp.openGuruModal()" class="bg-[#0f4c42] hover:bg-[#0d3b36] text-white px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1">
                   <i data-lucide="plus" class="w-3.5 h-3.5"></i> Tambah Guru Baru
+                </button>
+                <button onclick="window.adminApp.clearAllGuru()" class="bg-rose-600 hover:bg-rose-700 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 shadow">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Clear All Guru
                 </button>
               </div>
             </div>
@@ -942,7 +1020,10 @@
                         </div>
                       </td>
                       <td class="p-3 text-right">
-                        <button onclick="window.adminApp.deleteGuru('${t.id}')" class="text-rose-600 hover:text-rose-800 font-bold">Hapus</button>
+                        <div class="flex items-center justify-end gap-2">
+                          <button onclick="window.adminApp.openGuruModal('${t.id}')" class="text-blue-600 hover:text-blue-800 font-bold bg-blue-50 px-2.5 py-1 rounded border border-blue-200">Edit</button>
+                          <button onclick="window.adminApp.deleteGuru('${t.id}')" class="text-rose-600 hover:text-rose-800 font-bold bg-rose-50 px-2.5 py-1 rounded border border-rose-200">Hapus</button>
+                        </div>
                       </td>
                     </tr>
                   `).join('')}
@@ -953,40 +1034,44 @@
         `;
       }
 
-      openAddGuruModal() {
+      openGuruModal(editId = null) {
         const db = this.db;
         const subjects = db.subjects || [];
+        const target = editId ? (db.teachers || []).find(t => t.id === editId) : null;
 
         this.showModal(`
           <div class="space-y-4 text-xs">
-            <h3 class="font-bold text-slate-900 text-sm">Tambah Data Guru Baru</h3>
-            <form onsubmit="window.adminApp.saveGuru(event)" class="space-y-3">
+            <h3 class="font-bold text-slate-900 text-sm">${target ? 'Edit Data Guru' : 'Tambah Data Guru Baru'}</h3>
+            <form onsubmit="window.adminApp.saveGuru(event, '${editId || ''}')" class="space-y-3">
               <div>
                 <label class="block font-bold text-slate-700 mb-1">Nama Lengkap Guru</label>
-                <input type="text" id="g-name" required placeholder="MUHAMMAD SYIHABUDDIN QOSTHALANI" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#0f4c42]">
+                <input type="text" id="g-name" value="${target ? target.name : ''}" required placeholder="MUHAMMAD SYIHABUDDIN QOSTHALANI" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#0f4c42]">
               </div>
               <div>
                 <label class="block font-bold text-slate-700 mb-1">NIP / NUPTK</label>
-                <input type="text" id="g-nuptk" placeholder="20244536196002" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#0f4c42]">
+                <input type="text" id="g-nuptk" value="${target ? (target.nuptk || '') : ''}" placeholder="20244536196002" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#0f4c42]">
               </div>
               <div>
                 <label class="block font-bold text-slate-700 mb-1">Username Login</label>
-                <input type="text" id="g-user" required placeholder="syihabadaw" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#0f4c42]">
+                <input type="text" id="g-user" value="${target ? target.username : ''}" required placeholder="syihabadaw" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#0f4c42]">
               </div>
               <div>
                 <label class="block font-bold text-slate-700 mb-1">Password</label>
-                <input type="text" id="g-pass" value="123" required class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#0f4c42]">
+                <input type="text" id="g-pass" value="${target ? target.password : '123'}" required class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#0f4c42]">
               </div>
 
               <div>
                 <label class="block font-bold text-slate-700 mb-2">Pilih Mapel Yang Diampu (Dari Master Mapel):</label>
                 <div class="space-y-1.5 max-h-40 overflow-y-auto bg-slate-50 p-3 rounded-xl border border-slate-200">
-                  ${subjects.map(s => `
-                    <label class="flex items-center gap-2 cursor-pointer font-bold text-slate-700">
-                      <input type="checkbox" name="g_subjects_check" value="${s}" class="w-4 h-4 accent-[#0f4c42]">
-                      <span>${s}</span>
-                    </label>
-                  `).join('')}
+                  ${subjects.map(s => {
+                    const isChecked = target && (target.subjects || []).includes(s);
+                    return `
+                      <label class="flex items-center gap-2 cursor-pointer font-bold text-slate-700">
+                        <input type="checkbox" name="g_subjects_check" value="${s}" ${isChecked ? 'checked' : ''} class="w-4 h-4 accent-[#0f4c42]">
+                        <span>${s}</span>
+                      </label>
+                    `;
+                  }).join('')}
                 </div>
               </div>
 
@@ -999,52 +1084,77 @@
         `);
       }
 
-      saveGuru(e) {
+      saveGuru(e, editId) {
         e.preventDefault();
         const db = this.db;
         if (!db.teachers) db.teachers = [];
 
         const checkedSubjects = Array.from(document.querySelectorAll('input[name="g_subjects_check"]:checked')).map(cb => cb.value);
+        const name = document.getElementById('g-name').value.trim();
+        const nuptk = document.getElementById('g-nuptk').value.trim();
+        const username = document.getElementById('g-user').value.trim();
+        const password = document.getElementById('g-pass').value.trim();
 
-        db.teachers.push({
-          id: '00' + (db.teachers.length + 1),
-          name: document.getElementById('g-name').value.trim(),
-          nuptk: document.getElementById('g-nuptk').value.trim(),
-          username: document.getElementById('g-user').value.trim(),
-          password: document.getElementById('g-pass').value.trim(),
-          subjects: checkedSubjects
-        });
+        if (editId) {
+          const idx = db.teachers.findIndex(t => t.id === editId);
+          if (idx !== -1) {
+            db.teachers[idx] = { id: editId, name, nuptk, username, password, subjects: checkedSubjects };
+            this.showToast('Data Guru berhasil diperbarui!');
+          }
+        } else {
+          db.teachers.push({
+            id: '00' + (db.teachers.length + 1),
+            name, nuptk, username, password, subjects: checkedSubjects
+          });
+          this.showToast('Guru baru berhasil ditambahkan!');
+        }
 
         this.saveDB(db);
         this.closeModal();
-        this.showToast('Guru berhasil ditambahkan!');
         this.render();
       }
 
       deleteGuru(id) {
-        const db = this.db;
-        db.teachers = (db.teachers || []).filter(t => t.id !== id);
-        this.saveDB(db);
-        this.showToast('Data guru dihapus!');
-        this.render();
+        if (confirm('Apakah Anda yakin ingin menghapus data guru ini?')) {
+          const db = this.db;
+          db.teachers = (db.teachers || []).filter(t => t.id !== id);
+          this.saveDB(db);
+          this.showToast('Data guru dihapus!');
+          this.render();
+        }
       }
 
-      // MODUL 4: KELOLA JADWAL & TOKEN (DENGAN JAM PELAKSANAAN)
+      // MODUL 4: KELOLA JADWAL & TOKEN (EDIT + CLEAR ALL)
+      clearAllJadwal() {
+        if (confirm('Apakah Anda YAKIN ingin MENGHAPUS SEMUA JADWAL UJIAN?')) {
+          const db = this.db;
+          db.schedules = [];
+          this.saveDB(db);
+          this.showToast('Seluruh jadwal ujian berhasil dibersihkan!');
+          this.render();
+        }
+      }
+
       renderTabJadwalContent() {
         const db = this.db;
         const schedules = db.schedules || [];
 
         return `
           <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
-            <div class="flex justify-between items-center border-b border-slate-200 pb-4">
+            <div class="flex justify-between items-center border-b border-slate-200 pb-4 flex-wrap gap-2">
               <div>
                 <h3 class="font-bold text-slate-900 text-base">📅 Kelola Jadwal Ujian & Token (Pusat Buat Jadwal)</h3>
                 <p class="text-xs text-slate-500">Atur Mata Pelajaran, Tingkat Utama, Jam Pelaksanaan & Token</p>
               </div>
 
-              <button onclick="window.adminApp.openAddJadwalModal()" class="bg-[#0f4c42] hover:bg-[#0d3b36] text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow">
-                <i data-lucide="plus-circle" class="w-4 h-4"></i> Buat Jadwal Ujian Baru
-              </button>
+              <div class="flex items-center gap-2">
+                <button onclick="window.adminApp.openJadwalModal()" class="bg-[#0f4c42] hover:bg-[#0d3b36] text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow">
+                  <i data-lucide="plus-circle" class="w-4 h-4"></i> Buat Jadwal Ujian
+                </button>
+                <button onclick="window.adminApp.clearAllJadwal()" class="bg-rose-600 hover:bg-rose-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1 shadow">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Clear All Jadwal
+                </button>
+              </div>
             </div>
 
             <div class="overflow-x-auto">
@@ -1072,7 +1182,10 @@
                       <td class="p-3 font-bold">${sc.duration || 60} Menit</td>
                       <td class="p-3"><code class="bg-emerald-50 text-emerald-800 font-mono font-bold px-2 py-1 rounded border border-emerald-200">${sc.token}</code></td>
                       <td class="p-3 text-right">
-                        <button onclick="window.adminApp.deleteJadwal('${sc.id}')" class="text-rose-600 hover:text-rose-800 font-bold">Hapus</button>
+                        <div class="flex items-center justify-end gap-2">
+                          <button onclick="window.adminApp.openJadwalModal('${sc.id}')" class="text-blue-600 hover:text-blue-800 font-bold bg-blue-50 px-2.5 py-1 rounded border border-blue-200">Edit</button>
+                          <button onclick="window.adminApp.deleteJadwal('${sc.id}')" class="text-rose-600 hover:text-rose-800 font-bold bg-rose-50 px-2.5 py-1 rounded border border-rose-200">Hapus</button>
+                        </div>
                       </td>
                     </tr>
                   `).join('')}
@@ -1084,50 +1197,51 @@
         `;
       }
 
-      openAddJadwalModal() {
+      openJadwalModal(editId = null) {
         const db = this.db;
         const subjects = db.subjects || [];
+        const target = editId ? (db.schedules || []).find(sc => sc.id === editId) : null;
 
         this.showModal(`
           <div class="space-y-4 text-xs">
-            <h3 class="font-bold text-slate-900 text-sm">Buat Jadwal Ujian & Token Baru</h3>
-            <form onsubmit="window.adminApp.saveJadwal(event)" class="space-y-3">
+            <h3 class="font-bold text-slate-900 text-sm">${target ? 'Edit Jadwal Ujian' : 'Buat Jadwal Ujian & Token Baru'}</h3>
+            <form onsubmit="window.adminApp.saveJadwal(event, '${editId || ''}')" class="space-y-3">
               <div>
                 <label class="block font-bold text-slate-700 mb-1">Pilih Mata Pelajaran (Master Mapel)</label>
                 <select id="j-subj" required class="w-full p-2.5 border border-slate-200 rounded-xl font-bold">
-                  ${subjects.map(s => `<option value="${s}">${s}</option>`).join('')}
+                  ${subjects.map(s => `<option value="${s}" ${target && target.subject === s ? 'selected' : ''}>${s}</option>`).join('')}
                 </select>
               </div>
 
               <div>
                 <label class="block font-bold text-slate-700 mb-1">Pilih Sasaran Tingkat Utama</label>
                 <select id="j-grade" required class="w-full p-2.5 border border-slate-200 rounded-xl font-bold">
-                  <option value="7">Tingkat 7</option>
-                  <option value="8">Tingkat 8</option>
-                  <option value="9">Tingkat 9</option>
-                  <option value="Olimpiade">Olimpiade</option>
+                  <option value="7" ${target && target.grade === '7' ? 'selected' : ''}>Tingkat 7</option>
+                  <option value="8" ${target && target.grade === '8' ? 'selected' : ''}>Tingkat 8</option>
+                  <option value="9" ${target && target.grade === '9' ? 'selected' : ''}>Tingkat 9</option>
+                  <option value="Olimpiade" ${target && target.grade === 'Olimpiade' ? 'selected' : ''}>Olimpiade</option>
                 </select>
               </div>
 
               <div>
                 <label class="block font-bold text-slate-700 mb-1">Tanggal Ujian</label>
-                <input type="date" id="j-date" required value="2026-10-20" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#0f4c42]">
+                <input type="date" id="j-date" required value="${target ? target.date : '2026-10-20'}" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#0f4c42]">
               </div>
 
               <div class="grid grid-cols-2 gap-2">
                 <div>
                   <label class="block font-bold text-slate-700 mb-1">Jam Mulai</label>
-                  <input type="time" id="j-start" required value="07:30" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#0f4c42]">
+                  <input type="time" id="j-start" required value="${target ? target.startTime : '07:30'}" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#0f4c42]">
                 </div>
                 <div>
                   <label class="block font-bold text-slate-700 mb-1">Jam Selesai</label>
-                  <input type="time" id="j-end" required value="08:30" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#0f4c42]">
+                  <input type="time" id="j-end" required value="${target ? target.endTime : '08:30'}" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#0f4c42]">
                 </div>
               </div>
 
               <div>
                 <label class="block font-bold text-slate-700 mb-1">Durasi Ujian (Menit)</label>
-                <input type="number" id="j-dur" required value="60" min="5" max="300" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#0f4c42]">
+                <input type="number" id="j-dur" required value="${target ? target.duration : 60}" min="5" max="300" class="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#0f4c42]">
               </div>
 
               <div>
@@ -1135,7 +1249,7 @@
                   <label class="block font-bold text-slate-700">Token Ujian</label>
                   <button type="button" onclick="window.adminApp.generateRandomToken()" class="text-[10px] font-bold text-emerald-800">🎲 Acak Token Auto</button>
                 </div>
-                <input type="text" id="j-token" required placeholder="AIP789" value="AIP789" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs font-mono font-bold uppercase focus:ring-2 focus:ring-[#0f4c42]">
+                <input type="text" id="j-token" required placeholder="AIP789" value="${target ? target.token : 'AIP789'}" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs font-mono font-bold uppercase focus:ring-2 focus:ring-[#0f4c42]">
               </div>
 
               <div class="flex justify-end gap-2 pt-2">
@@ -1157,38 +1271,60 @@
         if (tokenInput) tokenInput.value = token;
       }
 
-      saveJadwal(e) {
+      saveJadwal(e, editId) {
         e.preventDefault();
         const db = this.db;
         if (!db.schedules) db.schedules = [];
 
-        db.schedules.push({
-          id: 'SCH' + Date.now(),
-          subject: document.getElementById('j-subj').value,
-          grade: document.getElementById('j-grade').value,
-          date: document.getElementById('j-date').value,
-          startTime: document.getElementById('j-start').value,
-          endTime: document.getElementById('j-end').value,
-          duration: parseInt(document.getElementById('j-dur').value) || 60,
-          token: document.getElementById('j-token').value.trim().toUpperCase(),
-          isActive: false
-        });
+        const subject = document.getElementById('j-subj').value;
+        const grade = document.getElementById('j-grade').value;
+        const date = document.getElementById('j-date').value;
+        const startTime = document.getElementById('j-start').value;
+        const endTime = document.getElementById('j-end').value;
+        const duration = parseInt(document.getElementById('j-dur').value) || 60;
+        const token = document.getElementById('j-token').value.trim().toUpperCase();
+
+        if (editId) {
+          const idx = db.schedules.findIndex(sc => sc.id === editId);
+          if (idx !== -1) {
+            db.schedules[idx] = { ...db.schedules[idx], subject, grade, date, startTime, endTime, duration, token };
+            this.showToast('Jadwal Ujian berhasil diperbarui!');
+          }
+        } else {
+          db.schedules.push({
+            id: 'SCH' + Date.now(),
+            subject, grade, date, startTime, endTime, duration, token,
+            isActive: false
+          });
+          this.showToast('Jadwal Ujian baru berhasil dibuat!');
+        }
 
         this.saveDB(db);
         this.closeModal();
-        this.showToast('Jadwal Ujian berhasil dibuat!');
         this.render();
       }
 
       deleteJadwal(id) {
-        const db = this.db;
-        db.schedules = (db.schedules || []).filter(sc => sc.id !== id);
-        this.saveDB(db);
-        this.showToast('Jadwal dihapus!');
-        this.render();
+        if (confirm('Apakah Anda yakin ingin menghapus jadwal ujian ini?')) {
+          const db = this.db;
+          db.schedules = (db.schedules || []).filter(sc => sc.id !== id);
+          this.saveDB(db);
+          this.showToast('Jadwal dihapus!');
+          this.render();
+        }
       }
 
-      // MODUL 5: MONITORING REALTIME, KONTROL SESI & REKAP GLOBAL
+      // MODUL 5: MONITORING REALTIME, KONTROL SESI & REKAP GLOBAL (CLEAR ALL REKAP)
+      clearAllExamResults() {
+        if (confirm('Apakah Anda YAKIN ingin MENGHAPUS SEMUA REKAP NILAI UJIAN GLOBAL? Data nilai seluruh siswa akan dibersihkan!')) {
+          const db = this.db;
+          db.examResults = [];
+          this.saveDB(db);
+          this.showToast('Seluruh rekap nilai global berhasil dibersihkan!');
+          this.render();
+        }
+      }
+
       renderTabMonitoringContent() {
         const db = this.db;
         const mTab = this.monitoringTab;
@@ -1222,7 +1358,6 @@
         return `
           <div class="space-y-6 text-xs">
             
-            <!-- KONTROL SAKLAR SESI UJIAN -->
             <div class="space-y-3">
               <h4 class="font-bold text-slate-900 text-xs text-rose-700 flex items-center gap-1.5">
                 <i data-lucide="power" class="w-4 h-4"></i> Saklar Sesi Ujian Realtime (Aktifkan / Matikan)
@@ -1264,7 +1399,6 @@
               </div>
             </div>
 
-            <!-- LIVE MONITORING SISWA AKTIF -->
             <div class="space-y-3 pt-4 border-t border-slate-200">
               <h4 class="font-bold text-slate-900 text-xs flex items-center gap-1.5">
                 <i data-lucide="eye" class="w-4 h-4 text-emerald-700"></i> Live Monitoring Siswa Aktif Ujian (Realtime)
@@ -1325,9 +1459,14 @@
             <div class="flex justify-between items-center border-b border-slate-200 pb-3 flex-wrap gap-2">
               <h4 class="font-bold text-slate-900 text-xs">Rekap Nilai Global Seluruh Rombel (${results.length} Data)</h4>
               
-              <button onclick="window.adminApp.downloadRekapGlobalExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow">
-                <i data-lucide="download" class="w-4 h-4"></i> Download Rekap Global Excel (.xlsx)
-              </button>
+              <div class="flex items-center gap-2">
+                <button onclick="window.adminApp.downloadRekapGlobalExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow">
+                  <i data-lucide="download" class="w-4 h-4"></i> Download Rekap Global Excel (.xlsx)
+                </button>
+                <button onclick="window.adminApp.clearAllExamResults()" class="bg-rose-600 hover:bg-rose-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1 shadow">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Clear All Rekap Nilai
+                </button>
+              </div>
             </div>
 
             <div class="overflow-x-auto">
