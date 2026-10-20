@@ -297,9 +297,16 @@
         }
       }
 
-      // LANGKAH 1: PENGATURAN MULTI JENIS & JUMLAH SOAL
+      // LANGKAH 1: PENGATURAN KELAS/TINGKAT, MATA PELAJARAN, MULTI JENIS & JUMLAH SOAL
       renderConfigBankSoalForm() {
         const subjects = this.activeGuru.subjects || ['Informatika', 'BK'];
+
+        const targetGrades = [
+          { id: '7', label: 'Kelas 7' },
+          { id: '8', label: 'Kelas 8' },
+          { id: '9', label: 'Kelas 9' },
+          { id: 'olimpiade', label: 'Olimpiade' }
+        ];
 
         const questionTypes = [
           { id: 'pg_tunggal', label: 'Pilihan Ganda Tunggal' },
@@ -312,10 +319,20 @@
           <div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm max-w-xl mx-auto space-y-6">
             <div class="text-center space-y-1 border-b border-slate-100 pb-4">
               <h3 class="font-bold text-slate-900 text-lg">Pengaturan Bank Soal Baru</h3>
-              <p class="text-xs text-slate-500">Pilih Mata Pelajaran, Kombinasi Jenis Soal, dan Jumlah Soalnya</p>
+              <p class="text-xs text-slate-500">Pilih Kelas, Mata Pelajaran, Kombinasi Jenis Soal, dan Jumlah Soalnya</p>
             </div>
 
             <form onsubmit="window.guruApp.handleGenerateSlots(event)" class="space-y-5 text-xs">
+              
+              <!-- PILIH KELAS / TINGKAT -->
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">Pilih Kelas / Peruntukan Soal</label>
+                <select id="cfg-grade" required class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0f4c42] outline-none font-bold">
+                  ${targetGrades.map(g => `<option value="${g.id}">${g.label}</option>`).join('')}
+                </select>
+              </div>
+
+              <!-- PILIH MAPEL -->
               <div>
                 <label class="block font-bold text-slate-700 mb-1">Pilih Mata Pelajaran</label>
                 <select id="cfg-subj" required class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0f4c42] outline-none font-bold">
@@ -323,6 +340,7 @@
                 </select>
               </div>
 
+              <!-- PILIH JENIS & JUMLAH SOAL -->
               <div>
                 <label class="block font-bold text-slate-700 mb-2">Pilih Jenis Soal & Jumlahnya</label>
                 <div class="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
@@ -365,6 +383,7 @@
 
       handleGenerateSlots(e) {
         e.preventDefault();
+        const grade = document.getElementById('cfg-grade').value;
         const subj = document.getElementById('cfg-subj').value;
         const checkedTypes = Array.from(document.querySelectorAll('input[name="type_check"]:checked')).map(cb => cb.value);
 
@@ -397,7 +416,7 @@
           }
         });
 
-        this.bankConfig = { subject: subj, types: typeConfigs, totalCount: totalCount };
+        this.bankConfig = { grade: grade, subject: subj, types: typeConfigs, totalCount: totalCount };
 
         this.showToast(`Template ${totalCount} soal kombinasi berhasil dibuat!`);
         this.render();
@@ -406,13 +425,17 @@
       // LANGKAH 2: FORM ISI SOAL & FITUR UNDUH/UNGGAH WORD (.DOCX)
       renderFormPembuatanSoal() {
         const cfg = this.bankConfig;
+        const gradeLabel = cfg.grade === 'olimpiade' ? 'Olimpiade' : `Kelas ${cfg.grade}`;
 
         return `
           <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
             
             <div class="flex justify-between items-center flex-wrap gap-3 border-b border-slate-200 pb-4">
               <div>
-                <span class="bg-emerald-100 text-emerald-900 text-[10px] font-black uppercase px-2.5 py-1 rounded-full">${cfg.subject}</span>
+                <div class="flex items-center gap-2">
+                  <span class="bg-amber-100 text-amber-900 text-[10px] font-black uppercase px-2.5 py-1 rounded-full">${gradeLabel}</span>
+                  <span class="bg-emerald-100 text-emerald-900 text-[10px] font-black uppercase px-2.5 py-1 rounded-full">${cfg.subject}</span>
+                </div>
                 <h3 class="font-bold text-slate-900 text-base mt-1">
                   Template Soal Kombinasi (${cfg.totalCount} Soal Total)
                 </h3>
@@ -455,7 +478,7 @@
 
                     <div>
                       <label class="block font-bold text-slate-700 mb-1">URL Gambar (Opsional)</label>
-                      <input type="text" placeholder="https://..." value="${s.imageUrl || ''}" oninput="window.guruApp.updateSlotImage(${idx}, this.value)" class="w-full p-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0f4c42] outline-none">
+                      <input type="text" placeholder="https://..." value="${s.imageUrl \vert{}\vert{} ''}" oninput="window.guruApp.updateSlotImage(${idx}, this.value)" class="w-full p-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0f4c42] outline-none">
                     </div>
 
                     ${s.type !== 'esai' ? `
@@ -567,6 +590,7 @@
               if (parsedSlots.length > 0) {
                 this.generatedSlots = parsedSlots;
                 this.bankConfig = {
+                  grade: this.bankConfig ? this.bankConfig.grade : '7',
                   subject: this.bankConfig ? this.bankConfig.subject : 'Informatika',
                   types: [{ type: 'pg_tunggal', count: parsedSlots.length }],
                   totalCount: parsedSlots.length
@@ -594,6 +618,7 @@
         this.generatedSlots.forEach(s => {
           db.questions.push({
             id: s.id,
+            grade: this.bankConfig.grade,
             subject: this.bankConfig.subject,
             type: s.type || 'pg_tunggal',
             text: s.text,
